@@ -143,10 +143,10 @@ void GifImageSource::SelectNextFrame()
 
 	switch (disposal)
 	{
-	case DISPOSAL_UNSPECIFIED:
 	case DISPOSE_BACKGROUND:
 		m_dwPreviousFrame = m_dwCurrentFrame;
 		break;
+	case DISPOSAL_UNSPECIFIED:
 	case DISPOSE_DO_NOT:
 	case DISPOSE_PREVIOUS:
 	default:
@@ -163,31 +163,6 @@ void GifImageSource::SelectNextFrame()
 		m_dwPreviousFrame = 0;
 	}
 }
-//void GifImageSource::SetupPreviousFrame()
-//{
-//	int disposal = m_disposals[m_dwCurrentFrame];
-//
-//	switch (disposal)
-//	{
-//
-//	case DISPOSE_DO_NOT:
-//		//m_dwPreviousFrame = (m_dwCurrentFrame + 1) % m_dwFrameCount;
-//		break;
-//	case DISPOSAL_UNSPECIFIED:
-//	case DISPOSE_BACKGROUND:
-//		m_dwPreviousFrame = m_dwCurrentFrame;
-//		break;
-//	case DISPOSE_PREVIOUS:
-//		//	m_dwPreviousFrame = (m_dwCurrentFrame + 1) % m_dwFrameCount;
-//		break;
-//	default:
-//		// Corrupt disposal.
-//		//m_dwPreviousFrame = m_dwCurrentFrame;
-//		break;
-//
-//	}
-//}
-
 
 
 Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessStream^ pStream)
@@ -216,11 +191,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 {
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-	std::string str = Utilities::ReadStringFromStream(pStream, 3);
-	if (str != "GIF")
-		throw ref new InvalidArgumentException("File is not a valid GIF file");
 
-	pStream->Seek({ 0 }, STREAM_SEEK_SET, 0);
 
 	HRESULT hr = S_OK;
 	PROPVARIANT var;
@@ -251,6 +222,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 	hr = pDecoder->GetFrameCount(&dwFrameCount);
 
 	m_dwFrameCount = dwFrameCount;
+
 	m_bitmaps = std::vector<ComPtr<ID2D1Bitmap>>(m_dwFrameCount);
 	m_offsets = std::vector<D2D1_POINT_2F>(m_dwFrameCount);
 	m_delays = std::vector<USHORT>(m_dwFrameCount);
@@ -280,23 +252,14 @@ void GifImageSource::LoadImage(IStream *pStream)
 		hr = pFrameQueryReader->GetMetadataByName(L"/grctlext/Disposal", &var);
 		dwDisposal = var.uiVal;
 
-	/*	if (dwFrameIndex == 0)
-		{*/
-			// If this is the first frame, use the size of this frame as the size of the
-			// entire image. Assume offset is (0,0).
-		//	hr = pFrameDecode->GetSize((UINT*)&m_width, (UINT*)&m_height);
-		//}
-		//else
-		//{
-			// Get offset
-			PropVariantClear(&var);
-			hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Left", &var);
-			fOffsetX = var.uiVal;
+		// Get offset
+		PropVariantClear(&var);
+		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Left", &var);
+		fOffsetX = var.uiVal;
 
-			PropVariantClear(&var);
-			hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
-			fOffsetY = var.uiVal;
-		/*}*/
+		PropVariantClear(&var);
+		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
+		fOffsetY = var.uiVal;
 
 		// Set up converter 
 		ComPtr<IWICFormatConverter> pConvertedBitmap;
@@ -317,24 +280,14 @@ void GifImageSource::LoadImage(IStream *pStream)
 		// Finally, get ID2D1Bitmap for this frame
 		ComPtr<ID2D1Bitmap> pBitmap;
 
-			hr = m_d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap);
-			DX::ThrowIfFailed(hr);
+		hr = m_d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap);
+		DX::ThrowIfFailed(hr);
 
-
-			// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
+		// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
 		m_bitmaps[dwFrameIndex] = pBitmap;
 		m_offsets[dwFrameIndex] = { fOffsetX, fOffsetY };
 		m_delays[dwFrameIndex] = dwDelay;
 		m_disposals[dwFrameIndex] = dwDisposal;
-
-		//if (dwFrameIndex == 1)
-		//{
-		//	Utilities::ui_task(Dispatcher, [=]()
-		//	{
-		//		RenderFrame();
-		//	});
-		//}
-
 	}
 
 	PropVariantClear(&var);

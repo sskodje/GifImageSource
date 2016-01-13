@@ -6,6 +6,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GifImageSource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utilities.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GifMetadata.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)Direct2DManager.cpp" />

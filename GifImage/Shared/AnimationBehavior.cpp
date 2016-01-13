@@ -1,5 +1,8 @@
 #include "pch.h"
 #include "AnimationBehavior.h"
+#include "Robuffer.h"
+#include "Utilities.h";
+
 
 
 
@@ -25,9 +28,9 @@ AnimationBehavior::~AnimationBehavior()
 GifImageSource^ AnimationBehavior::GetGifImageSource(UIElement^ element)
 {
 	Image^ img = safe_cast<Image^>(element);
-	if(img!= nullptr)
+	if (img != nullptr)
 	{
-		if(img->Source!= nullptr)
+		if (img->Source != nullptr)
 		{
 			GifImageSource^ src = safe_cast<GifImageSource^>(img->Source);
 			if (src != nullptr)
@@ -363,16 +366,33 @@ concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStora
 
 concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStream(UIElement^ element, IRandomAccessStream^ stream)
 {
-	auto createDecoderTask = create_task(BitmapDecoder::CreateAsync(stream));
-	return	createDecoderTask.then([stream](BitmapDecoder^ decoder)
-	{
-		GifImageSource^ imageSource = ref new GifImageSource(decoder->PixelWidth, decoder->PixelHeight);
 
-		auto setSourceTask = create_task(imageSource->SetSourceAsync(stream));
-		return	setSourceTask.then([imageSource]()->GifImageSource^
-		{
-			return imageSource;
-		});
+
+	ComPtr<IStream> pIStream;
+	DX::ThrowIfFailed(
+		CreateStreamOverRandomAccessStream(
+			reinterpret_cast<IUnknown*>(stream),
+			IID_PPV_ARGS(&pIStream)));
+
+	auto pStream = pIStream.Get();
+	std::string str = Utilities::ReadStringFromStream(pStream, 3);
+	if (str != "GIF")
+		throw ref new InvalidArgumentException("File is not a valid GIF file");
+
+	str = Utilities::ReadStringFromStream(pStream, 3);
+	if (str != "89a" && str != "87a")
+		throw ref new InvalidArgumentException("Unsupported GIF version");
+
+
+	int width = Utilities::ReadIntFromStream(pStream, 2);
+	int height = Utilities::ReadIntFromStream(pStream, 2);
+
+	GifImageSource^ imageSource = ref new GifImageSource(width, height);
+
+	auto setSourceTask = create_task(imageSource->SetSourceAsync(stream));
+	return	setSourceTask.then([imageSource]()->GifImageSource^
+	{
+		return imageSource;
 	});
 }
 
