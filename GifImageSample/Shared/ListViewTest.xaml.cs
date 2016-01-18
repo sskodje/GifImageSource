@@ -108,6 +108,7 @@ namespace GifImageSample
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
+
           //  GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
         }
 
@@ -118,7 +119,10 @@ namespace GifImageSample
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-          //  GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
+            this.Unloaded -= Page_Unloaded;
+            this.Items = null;
+            this.DataContext = null;
+            //  GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
         }
     }
 }

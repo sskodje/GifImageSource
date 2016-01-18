@@ -19,7 +19,7 @@ using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage;
 using namespace Windows::Networking::BackgroundTransfer;
 
-GifImageSource::GifImageSource(int width, int height)
+GifImageSource::GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior)
 	: SurfaceImageSource(width, height),
 	m_width(width),
 	m_height(height),
@@ -28,12 +28,18 @@ GifImageSource::GifImageSource(int width, int height)
 	m_offsets(NULL),
 	m_delays(NULL),
 	m_dwCurrentFrame(0),
-	m_completedLoop(false),
-	m_loopCount(0),
+	m_dwPreviousFrame(0),
+	m_completedLoopCount(0),
+	//m_loopCount(0),
+	m_bitsPerPixel(8),
+	m_haveReservedDeviceResources(false),
+	m_repeatBehavior(nullptr),
 	m_isAnimatedGif(false)
 {
 	if (width < 0 || height < 0)
 		throw ref new Platform::InvalidArgumentException("Height and Width cannot be less than zero");
+
+	m_repeatBehavior = repeatBehavior;
 	CreateDeviceResources(false);
 }
 
@@ -48,13 +54,13 @@ GifImageSource::~GifImageSource()
 void GifImageSource::ClearResources()
 {
 	Stop();
-	if (m_timer != nullptr)
+	if (m_renderTimer != nullptr)
 	{
-		m_timer->Tick -= m_TickToken;
-		m_timer = nullptr;
+		m_renderTimer->Tick -= m_tickToken;
+		m_renderTimer = nullptr;
 
 	}
-
+	StopDurationTimer();
 	//while (!m_bitmaps.empty())
 	//{
 	//	m_bitmaps.back() = nullptr;
@@ -64,20 +70,21 @@ void GifImageSource::ClearResources()
 	m_offsets.clear();
 	m_delays.clear();
 	m_disposals.clear();
-	//delete m_d2dManager;
-//	m_d2dManager = nullptr;
 
 	m_width = 0;
 	m_height = 0;
-	m_loopCount = 0;
+	//m_loopCount = 0;
+	m_completedLoopCount = 0;
 	m_isAnimatedGif = false;
-	m_completedLoop = false;
+
+	m_repeatBehavior = nullptr;
 
 
 	m_dwFrameCount = 0;
 	m_dwCurrentFrame = 0;
 	m_dwPreviousFrame = 0;
 
+	m_stream = nullptr;
 	m_surfaceBitmap = nullptr;
 	if (m_haveReservedDeviceResources)
 	{
@@ -93,12 +100,18 @@ bool GifImageSource::RenderFrame()
 
 	auto bCanDraw = BeginDraw();
 	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
-	//auto m_d2dContext = m_d2dManager->GetD2DContext();
 	if (bCanDraw)
 	{
+		auto bitmap = m_bitmaps.at(m_dwCurrentFrame).Get();
+		if (bitmap == nullptr)
+		{
+			OutputDebugString(L"Bitmap is null, returning from RenderFrame");
+			return false;
+		}
+		
 		m_d2dContext->Clear();
 
-		for (uint32 i = m_dwPreviousFrame; i < m_dwCurrentFrame; i++)
+		for (uint32 i = 0; i < m_dwCurrentFrame; i++)
 		{
 			int disposal = m_disposals[i];
 
@@ -107,12 +120,25 @@ bool GifImageSource::RenderFrame()
 			case DISPOSAL_UNSPECIFIED:
 			case DISPOSE_DO_NOT:
 				m_d2dContext->DrawImage(m_bitmaps.at(i).Get(), m_offsets.at(i));
-				//	PrerenderBitmap(i);
 				break;
 			case DISPOSE_BACKGROUND:
+			{
+				auto offset = m_offsets.at(i);
+				auto bitmap = m_bitmaps.at(i).Get();
+				m_d2dContext->PushAxisAlignedClip(
+					D2D1::RectF(
+						static_cast<float>(offset.x),
+						static_cast<float>(offset.y),
+						static_cast<float>(offset.x + bitmap->GetPixelSize().width),
+						static_cast<float>(offset.y + bitmap->GetPixelSize().height)
+						),
+					D2D1_ANTIALIAS_MODE_ALIASED);
+
+
 				m_d2dContext->Clear();
+				m_d2dContext->PopAxisAlignedClip();
 				break;
-				//	case DISPOSAL_UNSPECIFIED:
+			}
 			case DISPOSE_PREVIOUS:
 			default:
 				// We don't need to render the intermediate frame if it's not
@@ -120,9 +146,21 @@ bool GifImageSource::RenderFrame()
 				break;
 			}
 		}
+
+
+		//ID2D1Layer* layer;
+		//auto offset = m_offsets.at(i);
+		//m_d2dContext->CreateLayer(D2D1::RectF(
+		//	static_cast<float>(offset.x),
+		//	static_cast<float>(offset.y),
+		//	static_cast<float>(offset.x + bitmap->GetPixelSize().width),
+		//	static_cast<float>(offset.y + bitmap->GetPixelSize().height)
+		//	), &layer);
+		//
+		//m_d2dContext->PushLayer(
 		//draw current frame on top
 		m_d2dContext->DrawImage(m_bitmaps.at(m_dwCurrentFrame).Get(), m_offsets.at(m_dwCurrentFrame));
-
+		
 
 		SetNextInterval();
 		//SetupPreviousFrame();
@@ -136,32 +174,39 @@ bool GifImageSource::RenderFrame()
 	// Returns true if we just completed a loop
 	return m_dwCurrentFrame == 0;
 }
+
 void GifImageSource::SelectNextFrame()
 {
-	//m_dwPreviousFrame = m_dwCurrentFrame;
-	int disposal = m_disposals[m_dwCurrentFrame];
+	//////m_dwPreviousFrame = m_dwCurrentFrame;
+	//int disposal = m_disposals[m_dwCurrentFrame];
 
-	switch (disposal)
-	{
-	case DISPOSE_BACKGROUND:
-		m_dwPreviousFrame = m_dwCurrentFrame;
-		break;
-	case DISPOSAL_UNSPECIFIED:
-	case DISPOSE_DO_NOT:
-	case DISPOSE_PREVIOUS:
-	default:
-		// Corrupt disposal.
-		//m_dwPreviousFrame = m_dwCurrentFrame;
-		break;
+	//	switch (disposal)
+	//	{
+	//	case DISPOSE_BACKGROUND:
+	//	{
+	//		auto offset = m_offsets[m_dwCurrentFrame];
+	//		if (offset.x == 0 && offset.y == 0)
+	//		{
+	//			m_dwPreviousFrame = m_dwCurrentFrame;
+	//		}
+	//		break;
+	//	}
+	//	case DISPOSAL_UNSPECIFIED:
+	//	case DISPOSE_DO_NOT:
+	//	case DISPOSE_PREVIOUS:
+	//	default:
+	//		// Corrupt disposal.
+	//		//m_dwPreviousFrame = m_dwCurrentFrame;
+	//		break;
 
-	}
+	//	}
 
 	m_dwCurrentFrame = (m_dwCurrentFrame + 1) % m_dwFrameCount;
 
-	if (m_dwCurrentFrame < m_dwPreviousFrame)
-	{
-		m_dwPreviousFrame = 0;
-	}
+	//if (m_dwCurrentFrame < m_dwPreviousFrame)
+	//{
+	//	m_dwPreviousFrame = 0;
+	//}
 }
 
 
@@ -173,7 +218,8 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 	return create_async([this, pStream]() -> void
 	{
 		m_dwCurrentFrame = 0;
-		m_completedLoop = false;
+		m_dwPreviousFrame = 0;
+		m_completedLoopCount = 0;
 
 		ComPtr<IStream> pIStream;
 		DX::ThrowIfFailed(
@@ -182,16 +228,12 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 				IID_PPV_ARGS(&pIStream)));
 
 		LoadImage(pIStream.Get());
-
-
 	});
 }
 
 void GifImageSource::LoadImage(IStream *pStream)
 {
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
-
-
 
 	HRESULT hr = S_OK;
 	PROPVARIANT var;
@@ -210,6 +252,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 	ComPtr<IWICBitmapDecoder> pDecoder;
 	hr = pFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnDemand, &pDecoder);
 	DX::ThrowIfFailed(hr);
+
 	// IWICMetadataQueryReader is roughly analogous to BitmapPropertiesView
 	ComPtr<IWICMetadataQueryReader> pQueryReader;
 	hr = pDecoder->GetMetadataQueryReader(&pQueryReader);
@@ -260,8 +303,9 @@ void GifImageSource::LoadImage(IStream *pStream)
 		PropVariantClear(&var);
 		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
 		fOffsetY = var.uiVal;
-
-		// Set up converter 
+		//if (dwFrameIndex == 0)
+		//{
+			// Set up converter 
 		ComPtr<IWICFormatConverter> pConvertedBitmap;
 		hr = pFactory->CreateFormatConverter(&pConvertedBitmap);
 
@@ -285,11 +329,13 @@ void GifImageSource::LoadImage(IStream *pStream)
 
 		// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
 		m_bitmaps[dwFrameIndex] = pBitmap;
+		/*	}*/
 		m_offsets[dwFrameIndex] = { fOffsetX, fOffsetY };
 		m_delays[dwFrameIndex] = dwDelay;
 		m_disposals[dwFrameIndex] = dwDisposal;
 	}
 
+	m_stream = pStream;
 	PropVariantClear(&var);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(t2 - t1).count();
@@ -303,61 +349,87 @@ HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
 	PropVariantInit(&var);
 
 	// Default to non-animated gif
-	m_isAnimatedGif = false;
+	m_isAnimatedGif = true;
 
-
-
-
-	hr = pQueryReader->GetMetadataByName(L"/appext/Application", &var);
+	hr = pQueryReader->GetMetadataByName(L"/logscrdesc/ColorResolution", &var);
 	if (FAILED(hr))
 		return hr;
-
-	if (var.vt != (VT_UI1 | VT_VECTOR))
-		return S_FALSE;
-	if (var.caub.cElems != 0x0B) // must be exactly 11 bytes long
-		return S_FALSE;
-
-	static LPCSTR strNetscape = "NETSCAPE2.0";
-	for (ULONG i = 0; i < var.caub.cElems; i++)
-	{
-		// Manual strcmp
-		if (*(var.caub.pElems + i) != strNetscape[i])
-			return S_FALSE;
-	}
-
+	m_bitsPerPixel = var.uintVal + 1;
 	PropVariantClear(&var);
-	hr = pQueryReader->GetMetadataByName(L"/appext/Data", &var);
-	if (FAILED(hr))
-		return hr;
 
-	// Only handle case where the application data block is exactly 4 bytes long
-	if (var.caub.cElems != 4)
-		return S_FALSE;
-
-	auto count = *var.caub.pElems; // Data length; we generally expect this value to be 3
-	if (count >= 1)
-	{
-		m_isAnimatedGif = *(var.caub.pElems + 1) != 0; // is animated gif; we generally expect this byte to be 1
-	}
-	if (count == 3)
-	{
-		// iteration count; 2nd element is LSB, 3rd element is MSB
-		// we generally expect this value to be 0
-		m_loopCount = (*(var.caub.pElems + 3) << 8) + *(var.caub.pElems + 2);
-	}
-	PropVariantClear(&var);
-	hr = pQueryReader->GetMetadataByName(L"/logscrdesc/Height", &var);
-	if (FAILED(hr))
-		return hr;
-	m_height = var.uintVal;
-	PropVariantClear(&var);
-	hr = pQueryReader->GetMetadataByName(L"/logscrdesc/Width", &var);
-	if (FAILED(hr))
-		return hr;
-	m_width = var.uintVal;
+	HRESULT extHr = ReadGifApplicationExtension(pQueryReader);
 
 	return hr;
 }
+
+//This checks for the NETSCAPE2.0 or ANIMEXTS1.0 extensions.
+//These extensions tell us of the GIF is animated or not.
+HRESULT GifImageSource::ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader)
+{
+	PROPVARIANT var;
+	PropVariantInit(&var);
+	HRESULT hr = pQueryReader->GetMetadataByName(L"/appext/Application", &var);
+	if (SUCCEEDED(hr))
+	{
+
+		if (var.vt != (VT_UI1 | VT_VECTOR))
+			return S_FALSE;
+		if (var.caub.cElems != 0x0B) // must be exactly 11 bytes long
+			return S_FALSE;
+
+		static LPCSTR strNetscape = "NETSCAPE2.0";
+		static LPCSTR strAnimexts = "ANIMEXTS1.0";
+		//for (ULONG i = 0; i < var.caub.cElems; i++)
+		//{
+		//	// Manual strcmp
+		//	if (*(var.caub.pElems + i) != strNetscape[i])
+		//		return S_FALSE;
+		//}
+
+		std::string str(var.caub.pElems, var.caub.pElems + var.caub.cElems);
+		if (str != strNetscape && str != strAnimexts)
+		{
+			return S_FALSE;
+		}
+
+
+		PropVariantClear(&var);
+		hr = pQueryReader->GetMetadataByName(L"/appext/Data", &var);
+		if (FAILED(hr))
+			return hr;
+
+		// Only handle case where the application data block is exactly 4 bytes long
+		if (var.caub.cElems != 4)
+			return S_FALSE;
+
+		auto count = *var.caub.pElems; // Data length; we generally expect this value to be 3
+		if (count >= 1)
+		{
+			m_isAnimatedGif = *(var.caub.pElems + 1) != 0; // is animated gif; we generally expect this byte to be 1
+		}
+		if (count == 3)
+		{
+			auto defaultRepeat = RepeatBehavior();
+			//hack: find it how to compare to default class instead of this.
+			if (m_repeatBehavior == nullptr ||( defaultRepeat.Type == m_repeatBehavior->Value.Type
+												&& defaultRepeat.Count == m_repeatBehavior->Value.Count
+												&& defaultRepeat.Duration.Duration == m_repeatBehavior->Value.Duration.Duration))
+			{
+				// iteration count; 2nd element is LSB, 3rd element is MSB
+				// we generally expect this value to be 0
+				auto loopCount = (*(var.caub.pElems + 3) << 8) + *(var.caub.pElems + 2);
+				if (loopCount == 0)
+					m_repeatBehavior = RepeatBehavior::Forever;
+				else
+				{
+					auto behavior = RepeatBehavior{ (double)loopCount };
+					m_repeatBehavior = ref new Platform::Box<RepeatBehavior>(behavior);
+				}
+			}
+		}
+	}
+}
+
 void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 {
 	//m_d2dManager = Direct2DManager::GetInstance();
@@ -450,7 +522,6 @@ bool GifImageSource::BeginDraw()
 void GifImageSource::EndDraw()
 {
 	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
-	//auto m_d2dContext = m_d2dManager->GetD2DContext();
 	// Remove the transform and clip applied in BeginDraw since 
 	// the target area can change on every update. 
 	m_d2dContext->SetTransform(D2D1::IdentityMatrix());
@@ -476,10 +547,31 @@ void GifImageSource::EndDraw()
 
 void GifImageSource::Restart()
 {
-	m_dwCurrentFrame = 0;
-	m_completedLoop = false;
+	m_completedLoopCount = 0;
+	StopDurationTimer();
+	StartDurationTimer();
 }
+void GifImageSource::StartDurationTimer()
+{
+	if (m_repeatBehavior != nullptr && m_repeatBehavior->Value.Type == RepeatBehaviorType::Duration)
+	{
+		//double milliseconds = duration.Duration * 10000; 
+		m_durationTimer = ref new DispatcherTimer();
+		m_durationTimer->Interval = m_repeatBehavior->Value.Duration;
+		m_durationTickToken = m_durationTimer->Tick += ref new EventHandler<Object^>(this, &GifImageSource::OnDurationEndedTick);
+		m_durationTimer->Start();
+	}
 
+}
+void GifImageSource::StopDurationTimer()
+{
+	if (m_renderTimer != nullptr)
+	{
+		m_durationTimer->Tick -= m_durationTickToken;
+		m_durationTimer->Stop();
+		m_durationTimer = nullptr;
+	}
+}
 void GifImageSource::SetNextInterval()
 {
 	auto delay = m_delays.at(m_dwCurrentFrame);
@@ -490,39 +582,42 @@ void GifImageSource::SetNextInterval()
 
 	auto timespan = TimeSpan();
 	timespan.Duration = 80000L * delay; // 8ms * delay. (should be 10ms, but this gives the impression of awesome perf)
-	if (m_timer != nullptr)
-		m_timer->Interval = timespan;
+	if (m_renderTimer != nullptr)
+		m_renderTimer->Interval = timespan;
 }
 
 void GifImageSource::Start()
 {
-
-	if (m_timer == nullptr)
+	if (!m_isAnimatedGif)
+		return;
+	if (m_renderTimer == nullptr)
 	{
-		m_timer = ref new DispatcherTimer();
-		m_TickToken = m_timer->Tick += ref new EventHandler<Object^>(this, &GifImageSource::OnTick);
+		m_renderTimer = ref new DispatcherTimer();
+		m_tickToken = m_renderTimer->Tick += ref new EventHandler<Object^>(this, &GifImageSource::OnTick);
 	}
-	if (m_timer->IsEnabled)
+	if (m_renderTimer->IsEnabled)
 		return;
 
-	if (m_isAnimatedGif || !m_completedLoop)
+	if (m_completedLoopCount == 0)
 	{
-		m_timer->Start();
+		m_renderTimer->Start();
 	}
+	StartDurationTimer();
 }
 
 void GifImageSource::Stop()
 {
-	if (m_timer != nullptr && m_timer->IsEnabled)
+	if (m_renderTimer != nullptr && m_renderTimer->IsEnabled)
 	{
-		m_timer->Stop();
+		m_renderTimer->Stop();
+		m_completedLoopCount = 0;
 	}
 }
 
 void GifImageSource::OnTick(Object ^sender, Object ^args)
 {
 	// Timer might've been stopped just prior to OnTick
-	if (m_timer == nullptr || !m_timer->IsEnabled)
+	if (m_renderTimer == nullptr || !m_renderTimer->IsEnabled)
 	{
 		return;
 	}
@@ -532,13 +627,17 @@ void GifImageSource::OnTick(Object ^sender, Object ^args)
 		auto completedLoop = RenderFrame();
 		if (completedLoop)
 		{
-			// Allow gif to play through at least once, no matter what
-			m_completedLoop = true;
+			m_completedLoopCount++;
 
-			// Stop animation if this is not a looping gif
-			if (!m_isAnimatedGif)
+			if (m_repeatBehavior != nullptr)
 			{
-				m_timer->Stop();
+				// Stop animation if this is not a perpetually looping gif
+				if (m_repeatBehavior->Value.Type == RepeatBehaviorType::Count && m_repeatBehavior->Value.Count > 0 && m_repeatBehavior->Value.Count == m_completedLoopCount)
+				{
+					//Reset the gif to it's first frame before we stop
+					RenderFrame();
+					Stop();
+				}
 			}
 		}
 	}
@@ -548,7 +647,19 @@ void GifImageSource::OnTick(Object ^sender, Object ^args)
 	}
 }
 
+void GifImageSource::OnDurationEndedTick(Object ^sender, Object ^args)
+{
+	// Timer might've been stopped just prior to OnTick
+	if (m_durationTimer == nullptr || !m_durationTimer->IsEnabled)
+	{
+		return;
+	}
+	m_dwCurrentFrame = 0;
+	RenderFrame();
 
+	Stop();
+	m_dwCurrentFrame = 0;
+}
 
 
 

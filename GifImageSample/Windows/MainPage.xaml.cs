@@ -16,21 +16,28 @@ namespace GifImageSample
         public MainPage()
         {
             InitializeComponent();
-            GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
+              GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
             List<MyModel> items = new List<MyModel>();
 
             items.AddRange(Enumerable.Range(1, 23).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
-            items.Add(new MyModel(new Uri("ms-appx:///Gifs/kitty.gif")));
             items.Add(new MyModel(new Uri("http://i.imgur.com/9Bo0CZi.gif")));
             items.Add(new MyModel(new Uri("https://media.giphy.com/media/xT77XR3gI2c7NiDzEY/giphy.gif")));
-            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/rose_sparkle.gif")));
-            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_prev.gif")));
+            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_bgnd.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/dl_world_anim.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_opt/bunny_bgnd_lzw_gifsicle.gif")));
             items.Add(new MyModel(new Uri("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg/800px-Tour_Eiffel_Wikimedia_Commons.jpg")));
             items.Add(new MyModel(new Uri("http://i.imgur.com/YHoBqLR.gif")));
+
+
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
+
+
+
+        }
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
         }
         private void AnimationBehavior_OnError(object sender, string s)
         {
@@ -38,6 +45,7 @@ namespace GifImageSample
         }
         private async void Load_Click(object sender, RoutedEventArgs e)
         {
+           
             //_gifImage.UriSource = new Uri("ms-appx:///kitty.gif");
             // GifImage.AnimationBehavior.SetImageUriSource(_gifImage, new Uri("ms-appx:///Gifs/kitty.gif"));
 
@@ -46,30 +54,37 @@ namespace GifImageSample
 
 
             await OpenGif(((MyModel)this.cbGifs.SelectedItem).Uri);
+            GifImage.AnimationBehavior.SetRepeatBehavior(_gifImage, new Windows.UI.Xaml.Media.Animation.RepeatBehavior(5));
         }
 
         private void Unload_Click(object sender, RoutedEventArgs e)
         {
+           
             //_gifImage.UriSource = null;
-               GifImage.AnimationBehavior.SetImageUriSource(_gifImage, null);
-          //  GifImage.AnimationBehavior.SetImageStreamSource(_gifImage, null);
 
-          //  XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, null);
+
+              GifImage.AnimationBehavior.SetImageUriSource(_gifImage, null);
+
+
+
+            //  GifImage.AnimationBehavior.SetImageStreamSource(_gifImage, null);
+
+            //  XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, null);
         }
 
         private void Play_Click(object sender, RoutedEventArgs e)
         {
-          //  _gifImage.IsAnimating = true;
+            //  _gifImage.IsAnimating = true;
         }
 
         private void Pause_Click(object sender, RoutedEventArgs e)
         {
-          //  _gifImage.IsAnimating = false;
+            //  _gifImage.IsAnimating = false;
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void BnGridViewTest_Click(object sender, RoutedEventArgs e)
         {
-            this.Frame.Navigate(typeof(GridViewTest),48);
+            this.Frame.Navigate(typeof(GridViewTest), 48);
         }
 
         private void BnListViewTest_Click(object sender, RoutedEventArgs e)
@@ -81,7 +96,13 @@ namespace GifImageSample
         {
             //  string uri = "ms-appx:///Gifs/19.gif";
             //  XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, new Uri(uri));
-             GifImage.AnimationBehavior.SetImageUriSource(_gifImage, uri);    
+
+
+
+                  GifImage.AnimationBehavior.SetImageUriSource(_gifImage, uri);    
+
+
+
             //StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
             //GifImage.AnimationBehavior.SetImageStreamSource(_gifImage, await file.OpenReadAsync());
         }
@@ -90,8 +111,22 @@ namespace GifImageSample
         {
             if (e.AddedItems != null)
             {
-                await OpenGif(((MyModel)e.AddedItems[0]).Uri);
+                  await OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
+            //this.Unloaded -= Page_Unloaded;
+            //this.BnListViewTest.Click -= BnListViewTest_Click;
+            //this.AppBarButtonLoad.Click -= Load_Click;
+            //this.AppBarButtonUnload.Click -= Unload_Click;
+            //this.AppBarButtonPlay.Click -= Play_Click;
+            //this.AppBarButtonPause.Click -= Pause_Click;
+            //this.BnListViewTest.Click -= BnListViewTest_Click;
+            //this.BnGridViewTest.Click -= BnGridViewTest_Click;
+            //this.cbGifs.SelectionChanged -= cbGifs_SelectionChanged;
         }
     }
 }

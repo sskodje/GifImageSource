@@ -41,7 +41,7 @@ namespace GifImageSample
             HardwareButtons.BackPressed += HardwareButtons_BackPressed;
 #endif
 
-          //  this.NavigationCacheMode = NavigationCacheMode.Disabled;
+         //   this.NavigationCacheMode = NavigationCacheMode.Disabled;
         }
 
 
@@ -71,6 +71,11 @@ namespace GifImageSample
 
             Items = Enumerable.Range(1, gifCount).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList();
         }
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            navBackButton.Click -= Button_Click;
+        }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             if (Frame.CanGoBack)
@@ -79,6 +84,10 @@ namespace GifImageSample
 
         private void Image_Unloaded(object sender, RoutedEventArgs e)
         {
+            this.Items = null;
+            this.DataContext = null;
+            ((Image)sender).Unloaded -= Image_Unloaded;
+           // ((Image)sender).Source = null;
             //GifImage.AnimationBehavior.SetGifImageUri(((Image)sender), null);
          //   XamlAnimatedGif.AnimationBehavior.SetSourceUri((Image)sender, null);
         }

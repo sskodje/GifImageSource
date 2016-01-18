@@ -3,13 +3,17 @@
 #include "windows.foundation.h"
 #include "Direct2DManager.h"
 
+using namespace Windows::UI::Xaml::Media::Animation;
+using namespace Windows::Foundation;
+using namespace Platform;;
 namespace GifImage
 {
 	[Windows::Foundation::Metadata::WebHostHidden]
 	public ref class GifImageSource sealed : Windows::UI::Xaml::Media::Imaging::SurfaceImageSource
 	{
 	public:
-		GifImageSource(int width, int height);
+		GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior);
+		//GifImageSource(int width, int height, IBox<RepeatBehavior>^ repeatBehavior);
 		virtual ~GifImageSource();
 
 		/// <summary>
@@ -61,6 +65,7 @@ namespace GifImage
 		/// Clears all resources currently held in-memory.
 		/// </summary>
 		void ClearResources();
+		void SetRepeatBehavior(Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior);
 
 	private:
 #define DISPOSAL_UNSPECIFIED      0       /* No disposal specified. */
@@ -72,33 +77,39 @@ namespace GifImage
 		bool BeginDraw();
 		void EndDraw();
 
-		//void SetupPreviousFrame();
+		void StartDurationTimer();
+		void StopDurationTimer();
 		void SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
-
-	//	Direct2DManager* m_d2dManager;
+		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
 
 		ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
 		UINT m_width;
 		UINT m_height;
 		UINT m_dwFrameCount;
-		UINT m_loopCount;
+		//UINT m_loopCount;
 		bool m_isAnimatedGif;
-		bool m_completedLoop;
+		UINT m_completedLoopCount;
 		UINT m_dwCurrentFrame;
 		UINT m_dwPreviousFrame;
+		UINT m_bitsPerPixel;
 		bool m_haveReservedDeviceResources;
+		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
-		Windows::Foundation::EventRegistrationToken m_TickToken;
-
+		Windows::Foundation::EventRegistrationToken m_tickToken;
+		Windows::Foundation::EventRegistrationToken m_durationTickToken;
+		ComPtr<IStream> m_stream;
 		std::vector<ComPtr<ID2D1Bitmap>> m_bitmaps;
 		std::vector<D2D1_POINT_2F> m_offsets;
 		std::vector<USHORT> m_delays;
 		std::vector<USHORT> m_disposals;
 
-		Windows::UI::Xaml::DispatcherTimer^ m_timer;
+		Windows::UI::Xaml::DispatcherTimer^ m_renderTimer;
+		Windows::UI::Xaml::DispatcherTimer^ m_durationTimer;
 		void OnTick(Platform::Object ^sender, Platform::Object ^args);
+		void OnDurationEndedTick(Platform::Object ^sender, Platform::Object ^args);
+		
 	};
 }

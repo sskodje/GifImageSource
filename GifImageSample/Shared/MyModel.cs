@@ -18,17 +18,8 @@ namespace GifImageSample
         public static Uri GetSampleUriFromIndex(int index)
         {
             Uri uri = null;
-           // Index = index;
 
-            //else if (index == 5)
-            //{
-            //    Uri = new Uri("http://i.imgur.com/zxV5dpc.jpg");
-            //}
-            //else if (index == 10)
-            //{
-            //    Uri = new Uri("http://i.imgur.com/YHoBqLR.gif");
-            //}
-            if (index > 0 && index <= 23)
+            if (index > 0 && index <= 19)
             {
                 uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", index));
             }
@@ -44,9 +35,8 @@ namespace GifImageSample
             else
             {
                 Random r = new Random(index);
-                int i = r.Next(1, 23);
+                int i = r.Next(1, 19);
                 uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", i));
-                //    Uri = new Uri("ms-appx:///kitty.gif");
             }
             return uri;
         }

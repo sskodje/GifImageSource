@@ -36,10 +36,8 @@ namespace GifImageSample
             List<MyModel> items = new List<MyModel>();
 
             items.AddRange(Enumerable.Range(1, 23).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
-            items.Add(new MyModel(new Uri("ms-appx:///Gifs/kitty.gif")));
             items.Add(new MyModel(new Uri("http://i.imgur.com/9Bo0CZi.gif")));
             items.Add(new MyModel(new Uri("https://media.giphy.com/media/xT77XR3gI2c7NiDzEY/giphy.gif")));
-            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/rose_sparkle.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_prev.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/dl_world_anim.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_opt/bunny_bgnd_lzw_gifsicle.gif")));
@@ -62,8 +60,14 @@ namespace GifImageSample
         /// This parameter is typically used to configure the page.</param>
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
+            base.OnNavigatedTo(e);
+          //  GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
         }
-
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+           // GifImage.AnimationBehavior.OnError-= AnimationBehavior_OnError;
+        }
         private async void AppBarButtonLoad_Click(object sender, RoutedEventArgs e)
         {
             //  string uri = "http://i.imgur.com/0GNs9Lt.jpg";
@@ -106,9 +110,6 @@ namespace GifImageSample
             this.Frame.Navigate(typeof(GridViewTest), 20);
         }
 
-        private void Image_Unloaded(object sender, RoutedEventArgs e)
-        {
-        }
 
         private async Task OpenGif(Uri uri)
         {
@@ -121,10 +122,16 @@ namespace GifImageSample
 
         private async void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+           
             if (e.AddedItems != null)
             {
                 await OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
         }
     }
 }

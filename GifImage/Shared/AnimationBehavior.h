@@ -10,6 +10,7 @@ using namespace Windows::UI::Xaml;
 using namespace Windows::Foundation;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Streams;
+using namespace Windows::UI::Xaml::Media::Animation;
 namespace GifImage
 {
 	ref class AnimationBehavior;
@@ -41,6 +42,17 @@ namespace GifImage
 		static IRandomAccessStream^ GetImageStreamSource(UIElement^ element);
 		static void SetImageStreamSource(UIElement^ element, IRandomAccessStream^ value);
 
+		static property DependencyProperty^ RepeatBehavior
+		{
+			DependencyProperty^ get()
+			{
+				return s_repeatBehavior;
+			}
+		};
+		//static IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^  GetRepeatBehavior(UIElement^ element);
+		static Windows::UI::Xaml::Media::Animation::RepeatBehavior  GetRepeatBehavior(UIElement^ element);
+		static void SetRepeatBehavior(UIElement^ element, Windows::UI::Xaml::Media::Animation::RepeatBehavior value);
+
 		static GifImageSource^ GetGifImageSource(UIElement^ element);
 
 		static event ErrorEventHandler^ OnError;
@@ -48,20 +60,22 @@ namespace GifImage
 	private:
 		static void s_imageUriChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
 		static void s_imageStreamChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
+		static void s_repeatBehaviorChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
 		static DependencyProperty^ s_imageUriValue;
 		static DependencyProperty^ s_imageStreamValue;
-		//static DependencyProperty^ s_imageLoadedEventToken;
-		//static DependencyProperty^ s_imageUnloadedEventToken;
+		static DependencyProperty^ s_imageLoadedEventToken;
+		static DependencyProperty^ s_imageUnloadedEventToken;
+		static DependencyProperty^ s_repeatBehavior;
 
 		static void LoadSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);
 		static concurrency::task<GifImageSource^> GetGifImageSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);
 		static concurrency::task<GifImageSource^> GetGifImageSourceFromStream(UIElement^ element, IRandomAccessStream^ stream);
 
-		//static Windows::Foundation::EventRegistrationToken GetImageLoadedEventToken(UIElement^ element);
-		//static void SetImageLoadedEventToken(UIElement^ element, Object^ value);
+		static Windows::Foundation::EventRegistrationToken GetImageLoadedEventToken(UIElement^ element);
+		static void SetImageLoadedEventToken(UIElement^ element, Object^ value);
 
-		//static Windows::Foundation::EventRegistrationToken GetImageUnloadedEventToken(UIElement^ element);
-		//static void SetImageUnloadedEventToken(UIElement^ element, Windows::Foundation::EventRegistrationToken value);
+		static Windows::Foundation::EventRegistrationToken GetImageUnloadedEventToken(UIElement^ element);
+		static void SetImageUnloadedEventToken(UIElement^ element, Windows::Foundation::EventRegistrationToken value);
 
 		static bool IsLoaded(FrameworkElement^ element);
 		static void InitAnimation(UIElement^ img, Uri^ uriSource);
