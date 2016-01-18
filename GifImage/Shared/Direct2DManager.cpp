@@ -84,6 +84,8 @@ void Direct2DManager::CreateDeviceResources()
 			D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
 			&m_d2dContext));
 
+
+
 }
 
 void Direct2DManager::Recreate()

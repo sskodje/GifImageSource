@@ -84,8 +84,12 @@ namespace GifImage
 		void LoadImage(IStream* pStream);
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
+		HRESULT GetRawFrame(UINT uFrameIndex);
 
 		ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
+		ComPtr<IWICImagingFactory> m_pIWICFactory;
+		ComPtr<ID2D1Bitmap>            m_pRawFrame;
+		ComPtr<IWICBitmapDecoder> m_pDecoder;
 		UINT m_width;
 		UINT m_height;
 		UINT m_dwFrameCount;
@@ -110,6 +114,6 @@ namespace GifImage
 		Windows::UI::Xaml::DispatcherTimer^ m_durationTimer;
 		void OnTick(Platform::Object ^sender, Platform::Object ^args);
 		void OnDurationEndedTick(Platform::Object ^sender, Platform::Object ^args);
-		
+
 	};
 }
