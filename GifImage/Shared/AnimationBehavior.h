@@ -26,7 +26,7 @@ namespace GifImage
 		{
 			DependencyProperty^ get()
 			{
-				return s_imageUriValue;
+				return s_imageUriValueProperty;
 			}
 		};
 		static Uri^ GetImageUriSource(UIElement^ element);
@@ -36,7 +36,7 @@ namespace GifImage
 		{
 			DependencyProperty^ get()
 			{
-				return s_imageStreamValue;
+				return s_imageStreamValueProperty;
 			}
 		};
 		static IRandomAccessStream^ GetImageStreamSource(UIElement^ element);
@@ -46,12 +46,23 @@ namespace GifImage
 		{
 			DependencyProperty^ get()
 			{
-				return s_repeatBehavior;
+				return s_repeatBehaviorProperty;
 			}
 		};
-		//static IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^  GetRepeatBehavior(UIElement^ element);
+
 		static Windows::UI::Xaml::Media::Animation::RepeatBehavior  GetRepeatBehavior(UIElement^ element);
 		static void SetRepeatBehavior(UIElement^ element, Windows::UI::Xaml::Media::Animation::RepeatBehavior value);
+
+		static property DependencyProperty^ AutoStart
+		{
+			DependencyProperty^ get()
+			{
+				return s_autoStartProperty;
+			}
+		};
+
+		static Platform::Boolean  GetAutoStart(UIElement^ element);
+		static void SetAutoStart(UIElement^ element, Platform::Boolean value);
 
 		static GifImageSource^ GetGifImageSource(UIElement^ element);
 
@@ -61,11 +72,12 @@ namespace GifImage
 		static void s_imageUriChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
 		static void s_imageStreamChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
 		static void s_repeatBehaviorChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
-		static DependencyProperty^ s_imageUriValue;
-		static DependencyProperty^ s_imageStreamValue;
-		static DependencyProperty^ s_imageLoadedEventToken;
-		static DependencyProperty^ s_imageUnloadedEventToken;
-		static DependencyProperty^ s_repeatBehavior;
+		static DependencyProperty^ s_imageUriValueProperty;
+		static DependencyProperty^ s_imageStreamValueProperty;
+		static DependencyProperty^ s_imageLoadedEventTokenProperty;
+		static DependencyProperty^ s_imageUnloadedEventTokenProperty;
+		static DependencyProperty^ s_repeatBehaviorProperty;
+		static DependencyProperty^ s_autoStartProperty;
 
 		static void LoadSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);
 		static concurrency::task<GifImageSource^> GetGifImageSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);
@@ -81,7 +93,7 @@ namespace GifImage
 		static void InitAnimation(UIElement^ img, Uri^ uriSource);
 		static void InitAnimation(UIElement^ img, IRandomAccessStream^ streamSource);
 		static void ClearImageSource(UIElement^ element);
-		static std::wstring removeForbiddenChar(std::wstring s);
+
 
 		static void OnLoaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
 		static void OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);

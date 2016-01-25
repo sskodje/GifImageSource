@@ -47,13 +47,7 @@ namespace GifImage
 		/// </summary>
 		void Restart();
 
-		/// <summary>
-		/// Renders a single frame and increments the current frame index.
-		/// </summary>
-		/// <returns>
-		/// True if an animation loop was just completed, false otherwise.
-		/// </returns>
-		bool RenderFrame();
+
 		/// <summary>
 		/// Loads the image from the specified image stream.
 		/// </summary>
@@ -61,11 +55,11 @@ namespace GifImage
 
 
 	internal:
+		Windows::Foundation::EventRegistrationToken m_unloadedToken;
 		/// <summary>
 		/// Clears all resources currently held in-memory.
 		/// </summary>
 		void ClearResources();
-		void SetRepeatBehavior(Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior);
 
 	private:
 #define DISPOSAL_UNSPECIFIED      0       /* No disposal specified. */
@@ -73,38 +67,35 @@ namespace GifImage
 #define DISPOSE_BACKGROUND        2       /* Set area too background color */
 #define DISPOSE_PREVIOUS          3       /* Restore to previous content */
 
-		void CreateDeviceResources(boolean forceRecreate);
-		bool BeginDraw();
-		void EndDraw();
+#define MAX_MEMORY_KILOBYTES_PER_GIF	10240	/* We allocated a max of 10 megabytes of pixel memory per gif, if it is over, the entire GIF have to be decoded in realtime. */
 
-		void StartDurationTimer();
-		void StopDurationTimer();
-		void SetNextInterval();
-		void SelectNextFrame();
-		void LoadImage(IStream* pStream);
-		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
-		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
-		HRESULT GetRawFrame(UINT uFrameIndex);
 
 		ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
 		ComPtr<IWICImagingFactory> m_pIWICFactory;
 		ComPtr<ID2D1Bitmap>            m_pRawFrame;
+		ComPtr<ID2D1Bitmap>            m_pPreviousRawFrame;
 		ComPtr<IWICBitmapDecoder> m_pDecoder;
+
+
 		UINT m_width;
 		UINT m_height;
 		UINT m_dwFrameCount;
-		//UINT m_loopCount;
 		bool m_isAnimatedGif;
 		UINT m_completedLoopCount;
 		UINT m_dwCurrentFrame;
 		UINT m_dwPreviousFrame;
 		UINT m_bitsPerPixel;
+		UINT m_cachedKB;
 		bool m_haveReservedDeviceResources;
+		bool m_canCacheMoreFrames;
+
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
+		Windows::Foundation::EventRegistrationToken m_memoryTickToken;
 		Windows::Foundation::EventRegistrationToken m_tickToken;
 		Windows::Foundation::EventRegistrationToken m_durationTickToken;
-		ComPtr<IStream> m_stream;
+
+
 		std::vector<ComPtr<ID2D1Bitmap>> m_bitmaps;
 		std::vector<D2D1_POINT_2F> m_offsets;
 		std::vector<USHORT> m_delays;
@@ -112,8 +103,33 @@ namespace GifImage
 
 		Windows::UI::Xaml::DispatcherTimer^ m_renderTimer;
 		Windows::UI::Xaml::DispatcherTimer^ m_durationTimer;
+		Windows::UI::Xaml::DispatcherTimer^ m_memoryTimer;
+		/// <summary>
+		/// Renders a single frame and increments the current frame index.
+		/// </summary>
+		/// <returns>
+		/// True if an animation loop was just completed, false otherwise.
+		/// </returns>
+		bool RenderFrame();
+		void CreateDeviceResources(boolean forceRecreate);
+		bool BeginDraw();
+		void EndDraw();
+
+		void CheckMemoryLimits();
+		void StartDurationTimer();
+		void StopDurationTimer();
+		void SetNextInterval();
+		void SelectNextFrame();
+		void LoadImage(IStream* pStream);
+		void CopyCurrentFrameToBitmap();
+
 		void OnTick(Platform::Object ^sender, Platform::Object ^args);
 		void OnDurationEndedTick(Platform::Object ^sender, Platform::Object ^args);
+		void OnMemoryTimerTick(Platform::Object ^sender, Platform::Object ^args);
 
+
+		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
+		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
+		HRESULT GetRawFrame(UINT uFrameIndex);
 	};
 }

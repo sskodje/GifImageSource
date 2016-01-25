@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include <shcore.h>
+#include <chrono>
 namespace Utilities
 {
 	template <typename Func>
@@ -19,6 +20,21 @@ namespace Utilities
 		}, Platform::CallbackContext::Any));
 	}
 
+	template <typename Func>
+	static void timed_task(Platform::String^ name, Func func)
+	{
+
+#if DEBUG
+		high_resolution_clock::time_point t1 = high_resolution_clock::now();
+#endif
+				func();
+#if DEBUG
+				high_resolution_clock::time_point t2 = high_resolution_clock::now();
+				auto duration = duration_cast<milliseconds>(t2 - t1).count();
+				OutputDebugString(("Duration for "+ name +": "+ duration + "ms\r\n")->Data());
+#endif
+		
+	}
 
 	static int16 ReadIntFromStream(IStream *stream, uint32_t count)
 	{
@@ -35,6 +51,19 @@ namespace Utilities
 		ULONG* bytesRead = 0;
 		stream->Read(bytes.get(), count, bytesRead);
 		return std::string(bytes.get(), count);
+	}
+
+	static std::wstring RemoveForbiddenChar(std::wstring s)
+	{
+		const std::string illegalChars = "\\/:?\"<>|";
+		std::wstring::iterator it;
+		for (it = s.begin(); it < s.end(); ++it) {
+			bool found = illegalChars.find(*it) != std::string::npos;
+			if (found) {
+				*it = '_';
+			}
+		}
+		return s;
 	}
 };
 

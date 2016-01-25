@@ -14,7 +14,6 @@ using namespace Windows::Storage::Streams;
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Core;
 using namespace Windows::Foundation;
-
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage;
 using namespace Windows::Networking::BackgroundTransfer;
@@ -30,7 +29,7 @@ inline void SafeRelease(T *&pI)
 }
 
 GifImageSource::GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior)
-	: SurfaceImageSource(width, height),
+	:SurfaceImageSource(width, height),
 	m_width(width),
 	m_height(height),
 	m_dwFrameCount(0),
@@ -40,7 +39,6 @@ GifImageSource::GifImageSource(int width, int height, Platform::IBox<Windows::UI
 	m_dwCurrentFrame(0),
 	m_dwPreviousFrame(0),
 	m_completedLoopCount(0),
-	//m_loopCount(0),
 	m_bitsPerPixel(8),
 	m_haveReservedDeviceResources(false),
 	m_repeatBehavior(nullptr),
@@ -51,6 +49,16 @@ GifImageSource::GifImageSource(int width, int height, Platform::IBox<Windows::UI
 
 	m_repeatBehavior = repeatBehavior;
 	CreateDeviceResources(false);
+#if WINDOWS_PHONE_DLL
+	m_memoryTimer = ref new DispatcherTimer();
+	auto interval = TimeSpan();
+	interval.Duration = 10000000;
+	m_memoryTimer->Interval = interval;
+	m_memoryTickToken = m_memoryTimer->Tick += ref new Windows::Foundation::EventHandler<Platform::Object ^>(this, &GifImage::GifImageSource::OnMemoryTimerTick);
+	m_memoryTimer->Start();
+
+	CheckMemoryLimits();
+#endif
 }
 
 GifImageSource::~GifImageSource()
@@ -63,8 +71,6 @@ GifImageSource::~GifImageSource()
 
 void GifImageSource::ClearResources()
 {
-	m_pDecoder = nullptr;
-	m_pRawFrame=nullptr;
 
 	Stop();
 	if (m_renderTimer != nullptr)
@@ -73,20 +79,28 @@ void GifImageSource::ClearResources()
 		m_renderTimer = nullptr;
 
 	}
+	if (m_memoryTimer != nullptr)
+	{
+		m_memoryTimer->Tick -= m_memoryTickToken;
+		m_memoryTimer->Stop();
+		m_memoryTimer = nullptr;
+	}
 	StopDurationTimer();
-	//while (!m_bitmaps.empty())
-	//{
-	//	m_bitmaps.back() = nullptr;
-	//	m_bitmaps.pop_back();
-	//}
+
 	m_bitmaps.clear();
 	m_offsets.clear();
 	m_delays.clear();
 	m_disposals.clear();
 
+	m_pDecoder = nullptr;
+	m_pIWICFactory = nullptr;
+	m_surfaceBitmap = nullptr;
+	m_pRawFrame = nullptr;
+	m_pPreviousRawFrame = nullptr;
+
 	m_width = 0;
 	m_height = 0;
-	//m_loopCount = 0;
+
 	m_completedLoopCount = 0;
 	m_isAnimatedGif = false;
 
@@ -96,10 +110,8 @@ void GifImageSource::ClearResources()
 	m_dwFrameCount = 0;
 	m_dwCurrentFrame = 0;
 	m_dwPreviousFrame = 0;
+	m_cachedKB = 0;
 
-	m_stream = nullptr;
-	m_surfaceBitmap = nullptr;
-	m_pIWICFactory = nullptr;
 	if (m_haveReservedDeviceResources)
 	{
 		Direct2DManager::ReturnInstance();
@@ -111,72 +123,86 @@ void GifImageSource::ClearResources()
 
 bool GifImageSource::RenderFrame()
 {
+	HRESULT hr;
+	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
 
 	auto bCanDraw = BeginDraw();
-	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+
 	if (bCanDraw)
 	{
-		//auto bitmap = m_bitmaps.at(m_dwCurrentFrame).Get();
-		HRESULT hr = GetRawFrame(m_dwCurrentFrame);
-		if (FAILED(hr))//bitmap == nullptr)
+
+		m_d2dContext->Clear();
+
+		if (m_bitmaps.at(m_dwCurrentFrame) != nullptr)
 		{
-			OutputDebugString(L"Bitmap is null, returning from RenderFrame");
+			for (uint32 i = 0; i < m_dwCurrentFrame; i++)
+			{
+				int disposal = m_disposals[i];
+
+				switch (disposal)
+				{
+				case DISPOSAL_UNSPECIFIED:
+				case DISPOSE_DO_NOT:
+				{
+					hr = GetRawFrame(i);
+					if (SUCCEEDED(hr))
+						m_d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(i));
+					break;
+				}
+				case DISPOSE_BACKGROUND:
+				{
+					auto offset = m_offsets.at(i);
+					hr = GetRawFrame(i);
+					if (SUCCEEDED(hr))
+					{
+						m_d2dContext->PushAxisAlignedClip(
+							D2D1::RectF(
+								static_cast<float>(offset.x),
+								static_cast<float>(offset.y),
+								static_cast<float>(offset.x + m_pRawFrame->GetPixelSize().width),
+								static_cast<float>(offset.y + m_pRawFrame->GetPixelSize().height)
+								),
+							D2D1_ANTIALIAS_MODE_ALIASED);
+
+
+						m_d2dContext->Clear();
+						m_d2dContext->PopAxisAlignedClip();
+					}
+					break;
+				}
+				case DISPOSE_PREVIOUS:
+				default:
+					// We don't need to render the intermediate frame if it's not
+					// going to update the intermediate buffer anyway.
+					break;
+				}
+			}
+		}
+
+		hr = GetRawFrame(m_dwCurrentFrame);
+
+
+		if (m_pRawFrame == nullptr)
+		{
+			OutputDebugString(L"Bitmap is null, returning from RenderFrame\r\n");
 			return false;
 		}
-		//if (m_dwCurrentFrame == 0)
-			m_d2dContext->Clear();
-
-		for (uint32 i = 0; i < m_dwCurrentFrame; i++)
+		if (m_pPreviousRawFrame != nullptr)
 		{
-			int disposal = m_disposals[i];
+			m_d2dContext->DrawImage(m_pPreviousRawFrame.Get());
 
-			switch (disposal)
-			{
-			case DISPOSAL_UNSPECIFIED:
-			case DISPOSE_DO_NOT:
-				//m_d2dContext->DrawImage(m_bitmaps.at(i).Get(), m_offsets.at(i));
-				hr = GetRawFrame(m_dwCurrentFrame);
-				if(SUCCEEDED(hr))
-					m_d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(i));
-				break;
-			case DISPOSE_BACKGROUND:
-			{
-				auto offset = m_offsets.at(i);
-				//auto bitmap = m_bitmaps.at(i).Get();
-				hr = GetRawFrame(m_dwCurrentFrame);
-				if (SUCCEEDED(hr))
-				{
-					m_d2dContext->PushAxisAlignedClip(
-						D2D1::RectF(
-							static_cast<float>(offset.x),
-							static_cast<float>(offset.y),
-							static_cast<float>(offset.x + m_pRawFrame->GetPixelSize().width),
-							static_cast<float>(offset.y + m_pRawFrame->GetPixelSize().height)
-							),
-						D2D1_ANTIALIAS_MODE_ALIASED);
-
-
-					m_d2dContext->Clear();
-					m_d2dContext->PopAxisAlignedClip();
-				}
-				break;
-			}
-			case DISPOSE_PREVIOUS:
-			default:
-				// We don't need to render the intermediate frame if it's not
-				// going to update the intermediate buffer anyway.
-				break;
-			}
 		}
-
 		//draw current frame on top
-		//m_d2dContext->DrawImage(m_bitmaps.at(m_dwCurrentFrame).Get(), m_offsets.at(m_dwCurrentFrame));
 		m_d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(m_dwCurrentFrame));
 
-		SetNextInterval();
-		//SetupPreviousFrame();
-		EndDraw();
+		if (m_dwCurrentFrame + 1 < m_dwFrameCount&& m_bitmaps.at(m_dwCurrentFrame + 1) == nullptr)
+		{
+			CopyCurrentFrameToBitmap();
+		}
+
 		SelectNextFrame();
+
+		EndDraw();
 	}
 	else
 	{
@@ -186,8 +212,122 @@ bool GifImageSource::RenderFrame()
 	return m_dwCurrentFrame == 0;
 }
 
+
+//Save the bitmap to m_pPreviousRawFrame, so we can use it as a base frame for the next frame.
+//We do this to avoid having to potentially decode and draw hundreds of base frames for each new frame,
+//since we need to clear the SurfaceImageSource for each draw operation.
+void GifImageSource::CopyCurrentFrameToBitmap()
+{
+	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+
+	HRESULT hr;
+	//This is a bitmaprender we use to create the bitmaps off-screen.
+	ComPtr<ID2D1BitmapRenderTarget> render = 0;
+	m_d2dContext->CreateCompatibleRenderTarget(&render);
+
+	render->BeginDraw();
+	render->Clear();
+
+	if (m_pPreviousRawFrame != nullptr)
+		render->DrawBitmap(m_pPreviousRawFrame.Get());
+	else if (m_dwCurrentFrame > 0)
+	{
+		//In this situation we have missing frames in the cache, so we have to draw each previous frame from 0 to m_dwCurrentFrame
+		//in order to make a complete base frame for this gif.
+		for (uint32 i = 0; i < m_dwCurrentFrame; i++)
+		{
+			int disposal = m_disposals[i];
+			auto offset = m_offsets.at(i);
+			auto bitmap = m_bitmaps.at(i).Get();
+			auto rect = D2D1::RectF(
+				static_cast<float>(offset.x),
+				static_cast<float>(offset.y),
+				static_cast<float>(offset.x + bitmap->GetSize().width),
+				static_cast<float>(offset.y + bitmap->GetSize().height)
+				);
+			switch (disposal)
+			{
+			case DISPOSAL_UNSPECIFIED:
+			case DISPOSE_DO_NOT:
+			{
+				render->DrawBitmap(bitmap, rect);
+				break;
+			}
+			case DISPOSE_BACKGROUND:
+			{
+				render->PushAxisAlignedClip(
+					rect,
+					D2D1_ANTIALIAS_MODE_ALIASED);
+
+				render->Clear();
+				render->PopAxisAlignedClip();
+				break;
+			}
+			case DISPOSE_PREVIOUS:
+			default:
+				// We don't need to render the intermediate frame if it's not
+				// going to update the intermediate buffer anyway.
+				break;
+			}
+		}
+	}
+
+	int disposal = m_disposals[m_dwCurrentFrame];
+	auto offset = m_offsets.at(m_dwCurrentFrame);
+	auto rect = D2D1::RectF(
+		static_cast<float>(offset.x),
+		static_cast<float>(offset.y),
+		static_cast<float>(offset.x + m_pRawFrame->GetSize().width),
+		static_cast<float>(offset.y + m_pRawFrame->GetSize().height)
+		);
+
+	switch (disposal)
+	{
+	case DISPOSAL_UNSPECIFIED:
+	case DISPOSE_DO_NOT:
+	{
+		render->DrawBitmap(m_pRawFrame.Get(), rect);
+		break;
+	}
+	case DISPOSE_BACKGROUND:
+	{
+
+		render->PushAxisAlignedClip(
+			rect,
+			D2D1_ANTIALIAS_MODE_ALIASED);
+
+
+		render->Clear();
+		render->PopAxisAlignedClip();
+
+		break;
+	}
+	case DISPOSE_PREVIOUS:
+	default:
+		// We don't need to render the intermediate frame if it's not
+		// going to update the intermediate buffer anyway.
+		break;
+	}
+
+	hr = render->EndDraw(0, 0);
+
+	hr = render->GetBitmap(&m_pPreviousRawFrame);
+
+	render = nullptr;
+}
+
 HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 {
+
+	auto bitmap = m_bitmaps.at(uFrameIndex);
+	if (bitmap != nullptr)
+	{
+		m_pRawFrame = bitmap.Get();
+		return S_OK;
+	}
+
+	//Utilities::timed_task("GetRawFrame", [this,uFrameIndex]()
+	//{
 	IWICFormatConverter *pConverter = nullptr;
 	IWICBitmapFrameDecode *pWicFrame = nullptr;
 	IWICMetadataQueryReader *pFrameMetadataQueryReader = nullptr;
@@ -197,7 +337,7 @@ HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 
 	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
 	// IWICBitmapDecoder is roughly analogous to BitmapDecoder
-	
+
 
 
 	// Retrieve the current frame
@@ -229,129 +369,22 @@ HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 			&m_pRawFrame);
 	}
 
-	//if (SUCCEEDED(hr))
-	//{
-	//	// Get Metadata Query Reader from the frame
-	//	hr = pWicFrame->GetMetadataQueryReader(&pFrameMetadataQueryReader);
-	//}
 
-	//// Get the Metadata for the current frame
-	//if (SUCCEEDED(hr))
-	//{
-	//	hr = pFrameMetadataQueryReader->GetMetadataByName(L"/imgdesc/Left", &propValue);
-	//	if (SUCCEEDED(hr))
-	//	{
-	//		hr = (propValue.vt == VT_UI2 ? S_OK : E_FAIL);
-	//		if (SUCCEEDED(hr))
-	//		{
-	//			m_framePosition.left = static_cast<float>(propValue.uiVal);
-	//		}
-	//		PropVariantClear(&propValue);
-	//	}
-	//}
 
-	//if (SUCCEEDED(hr))
-	//{
-	//	hr = pFrameMetadataQueryReader->GetMetadataByName(L"/imgdesc/Top", &propValue);
-	//	if (SUCCEEDED(hr))
-	//	{
-	//		hr = (propValue.vt == VT_UI2 ? S_OK : E_FAIL);
-	//		if (SUCCEEDED(hr))
-	//		{
-	//			m_framePosition.top = static_cast<float>(propValue.uiVal);
-	//		}
-	//		PropVariantClear(&propValue);
-	//	}
-	//}
+	if (m_canCacheMoreFrames)
+	{
+		UINT kbInMemory = ((m_width * m_height) * (m_bitsPerPixel / 8)) / 1024;
 
-	//if (SUCCEEDED(hr))
-	//{
-	//	hr = pFrameMetadataQueryReader->GetMetadataByName(L"/imgdesc/Width", &propValue);
-	//	if (SUCCEEDED(hr))
-	//	{
-	//		hr = (propValue.vt == VT_UI2 ? S_OK : E_FAIL);
-	//		if (SUCCEEDED(hr))
-	//		{
-	//			m_framePosition.right = static_cast<float>(propValue.uiVal)
-	//				+ m_framePosition.left;
-	//		}
-	//		PropVariantClear(&propValue);
-	//	}
-	//}
-
-	//if (SUCCEEDED(hr))
-	//{
-	//	hr = pFrameMetadataQueryReader->GetMetadataByName(L"/imgdesc/Height", &propValue);
-	//	if (SUCCEEDED(hr))
-	//	{
-	//		hr = (propValue.vt == VT_UI2 ? S_OK : E_FAIL);
-	//		if (SUCCEEDED(hr))
-	//		{
-	//			m_framePosition.bottom = static_cast<float>(propValue.uiVal)
-	//				+ m_framePosition.top;
-	//		}
-	//		PropVariantClear(&propValue);
-	//	}
-	//}
-
-	//if (SUCCEEDED(hr))
-	//{
-	//	// Get delay from the optional Graphic Control Extension
-	//	if (SUCCEEDED(pFrameMetadataQueryReader->GetMetadataByName(
-	//		L"/grctlext/Delay",
-	//		&propValue)))
-	//	{
-	//		hr = (propValue.vt == VT_UI2 ? S_OK : E_FAIL);
-	//		if (SUCCEEDED(hr))
-	//		{
-	//			// Convert the delay retrieved in 10 ms units to a delay in 1 ms units
-	//			hr = UIntMult(propValue.uiVal, 10, &m_uFrameDelay);
-	//		}
-	//		PropVariantClear(&propValue);
-	//	}
-	//	else
-	//	{
-	//		// Failed to get delay from graphic control extension. Possibly a
-	//		// single frame image (non-animated gif)
-	//		m_uFrameDelay = 0;
-	//	}
-
-	//	if (SUCCEEDED(hr))
-	//	{
-	//		// Insert an artificial delay to ensure rendering for gif with very small
-	//		// or 0 delay.  This delay number is picked to match with most browsers' 
-	//		// gif display speed.
-	//		//
-	//		// This will defeat the purpose of using zero delay intermediate frames in 
-	//		// order to preserve compatibility. If this is removed, the zero delay 
-	//		// intermediate frames will not be visible.
-	//		if (m_uFrameDelay < 30)
-	//		{
-	//			m_uFrameDelay = 30;
-	//		}
-	//	}
-	//}
-
-	//if (SUCCEEDED(hr))
-	//{
-	//	if (SUCCEEDED(pFrameMetadataQueryReader->GetMetadataByName(
-	//		L"/grctlext/Disposal",
-	//		&propValue)))
-	//	{
-	//		hr = (propValue.vt == VT_UI1) ? S_OK : E_FAIL;
-	//		if (SUCCEEDED(hr))
-	//		{
-	//			m_uFrameDisposal = propValue.bVal;
-	//		}
-	//	}
-	//	else
-	//	{
-	//		// Failed to get the disposal method, use default. Possibly a 
-	//		// non-animated gif.
-	//		m_uFrameDisposal = DM_UNDEFINED;
-	//	}
-	//}
-
+		//if (m_cachedKB + kbInMemory < MAX_MEMORY_KILOBYTES_PER_GIF)
+		//{
+		//	m_cachedKB = m_cachedKB + kbInMemory;
+		m_bitmaps[uFrameIndex] = m_pRawFrame;
+		//}
+		//else
+		//{
+		OutputDebugString(("Rendering frame" + uFrameIndex + "in realtime\r\n")->Data());
+		//}
+	}
 	PropVariantClear(&propValue);
 
 	SafeRelease(pConverter);
@@ -359,40 +392,12 @@ HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 	SafeRelease(pFrameMetadataQueryReader);
 
 	return hr;
+	/*});*/
 }
 
 void GifImageSource::SelectNextFrame()
 {
-	//////m_dwPreviousFrame = m_dwCurrentFrame;
-	//int disposal = m_disposals[m_dwCurrentFrame];
-
-	//	switch (disposal)
-	//	{
-	//	case DISPOSE_BACKGROUND:
-	//	{
-	//		auto offset = m_offsets[m_dwCurrentFrame];
-	//		if (offset.x == 0 && offset.y == 0)
-	//		{
-	//			m_dwPreviousFrame = m_dwCurrentFrame;
-	//		}
-	//		break;
-	//	}
-	//	case DISPOSAL_UNSPECIFIED:
-	//	case DISPOSE_DO_NOT:
-	//	case DISPOSE_PREVIOUS:
-	//	default:
-	//		// Corrupt disposal.
-	//		//m_dwPreviousFrame = m_dwCurrentFrame;
-	//		break;
-
-	//	}
-
 	m_dwCurrentFrame = (m_dwCurrentFrame + 1) % m_dwFrameCount;
-
-	//if (m_dwCurrentFrame < m_dwPreviousFrame)
-	//{
-	//	m_dwPreviousFrame = 0;
-	//}
 }
 
 
@@ -406,6 +411,7 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 		m_dwCurrentFrame = 0;
 		m_dwPreviousFrame = 0;
 		m_completedLoopCount = 0;
+		m_cachedKB = 0;
 
 		ComPtr<IStream> pIStream;
 		DX::ThrowIfFailed(
@@ -419,113 +425,110 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 
 void GifImageSource::LoadImage(IStream *pStream)
 {
+#if DEBUG
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
-
+#endif
 	HRESULT hr = S_OK;
 	PROPVARIANT var;
 
 	PropVariantInit(&var);
 
-	// IWICImagingFactory is where it all begins
-	ComPtr<IWICImagingFactory> pFactory;
-	hr = CoCreateInstance(CLSID_WICImagingFactory,
-		NULL,
-		CLSCTX_INPROC_SERVER,
-		IID_IWICImagingFactory,
-		(LPVOID*)&pFactory);
-
 	// IWICBitmapDecoder is roughly analogous to BitmapDecoder
-	//ComPtr<IWICBitmapDecoder> pDecoder;
-	hr = pFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnDemand, &m_pDecoder);
+	hr = m_pIWICFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnDemand, &m_pDecoder);
 	DX::ThrowIfFailed(hr);
 
 	// IWICMetadataQueryReader is roughly analogous to BitmapPropertiesView
 	ComPtr<IWICMetadataQueryReader> pQueryReader;
 	hr = m_pDecoder->GetMetadataQueryReader(&pQueryReader);
 	DX::ThrowIfFailed(hr);
-	// Get image metadata
-	hr = QueryMetadata(pQueryReader.Get());
-	DX::ThrowIfFailed(hr);
 	// Get frame count
 	UINT dwFrameCount = 0;
 	hr = m_pDecoder->GetFrameCount(&dwFrameCount);
-
 	m_dwFrameCount = dwFrameCount;
+	// Get image metadata
+	hr = QueryMetadata(pQueryReader.Get());
+	DX::ThrowIfFailed(hr);
 
 	m_bitmaps = std::vector<ComPtr<ID2D1Bitmap>>(m_dwFrameCount);
 	m_offsets = std::vector<D2D1_POINT_2F>(m_dwFrameCount);
 	m_delays = std::vector<USHORT>(m_dwFrameCount);
 	m_disposals = std::vector<USHORT>(m_dwFrameCount);
-	// Get and convert each frame bitmap into ID2D1Bitmap
-	//for (UINT dwFrameIndex = 0; dwFrameIndex < dwFrameCount; dwFrameIndex++)
-	//{
-	//	// IWICBitmapFrameDecode is roughly analogous to BitmapFrame
-	//	ComPtr<IWICBitmapFrameDecode> pFrameDecode;
-	//	hr = m_pDecoder->GetFrame(dwFrameIndex, &pFrameDecode);
+	//	 Get and convert each frame bitmap into ID2D1Bitmap
+	for (UINT dwFrameIndex = 0; dwFrameIndex < dwFrameCount; dwFrameIndex++)
+	{
+		// IWICBitmapFrameDecode is roughly analogous to BitmapFrame
+		ComPtr<IWICBitmapFrameDecode> pFrameDecode;
+		hr = m_pDecoder->GetFrame(dwFrameIndex, &pFrameDecode);
 
-	//	// Need to get delay and offset metadata for each frame
-	//	ComPtr<IWICMetadataQueryReader> pFrameQueryReader;
-	//	hr = pFrameDecode->GetMetadataQueryReader(&pFrameQueryReader);
+		// Need to get delay and offset metadata for each frame
+		ComPtr<IWICMetadataQueryReader> pFrameQueryReader;
+		hr = pFrameDecode->GetMetadataQueryReader(&pFrameQueryReader);
 
-	//	FLOAT fOffsetX = 0.0;
-	//	FLOAT fOffsetY = 0.0;
-	//	USHORT dwDelay = 10; // default to 10 hundredths of a second (100 ms)
-	//	USHORT dwDisposal = 0;
-	//	// Get delay
-	//	PropVariantClear(&var);
-	//	hr = pFrameQueryReader->GetMetadataByName(L"/grctlext/Delay", &var);
-	//	dwDelay = var.uiVal;
+		FLOAT fOffsetX = 0.0;
+		FLOAT fOffsetY = 0.0;
+		USHORT dwDelay = 10; // default to 10 hundredths of a second (100 ms)
+		USHORT dwDisposal = 0;
+		// Get delay
+		PropVariantClear(&var);
+		hr = pFrameQueryReader->GetMetadataByName(L"/grctlext/Delay", &var);
+		dwDelay = var.uiVal;
 
-	//	//Get disposal
-	//	PropVariantClear(&var);
-	//	hr = pFrameQueryReader->GetMetadataByName(L"/grctlext/Disposal", &var);
-	//	dwDisposal = var.uiVal;
+		//Get disposal
+		PropVariantClear(&var);
+		hr = pFrameQueryReader->GetMetadataByName(L"/grctlext/Disposal", &var);
+		dwDisposal = var.uiVal;
 
-	//	// Get offset
-	//	PropVariantClear(&var);
-	//	hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Left", &var);
-	//	fOffsetX = var.uiVal;
+		// Get offset
+		PropVariantClear(&var);
+		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Left", &var);
+		fOffsetX = var.uiVal;
 
-	//	PropVariantClear(&var);
-	//	hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
-	//	fOffsetY = var.uiVal;
-	//	//if (dwFrameIndex == 0)
-	//	//{
-	//		// Set up converter 
-	//	ComPtr<IWICFormatConverter> pConvertedBitmap;
-	//	hr = pFactory->CreateFormatConverter(&pConvertedBitmap);
+		PropVariantClear(&var);
+		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
+		fOffsetY = var.uiVal;
+		//Preload the bitmaps for the 10 first frames, to get a smooth start.
+		if (dwFrameIndex < 10)
+		{
+			// Set up converter 
+			ComPtr<IWICFormatConverter> pConvertedBitmap;
+			hr = m_pIWICFactory->CreateFormatConverter(&pConvertedBitmap);
 
-	//	// Convert bitmap to B8G8R8A8
-	//	hr = pConvertedBitmap->Initialize(pFrameDecode.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeCustom);
+			// Convert bitmap to B8G8R8A8
+			hr = pConvertedBitmap->Initialize(pFrameDecode.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeCustom);
 
-	//	// Store converted bitmap into IWICBitmap so D2D can use it
-	//	ComPtr<IWICBitmap> pWicBitmap;
-	//	hr = pFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap);
+			// Store converted bitmap into IWICBitmap so D2D can use it
+			ComPtr<IWICBitmap> pWicBitmap;
+			hr = m_pIWICFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap);
+
+			auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+
+			// Finally, get ID2D1Bitmap for this frame
+			ComPtr<ID2D1Bitmap> pBitmap;
+
+			hr = m_d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap);
+			DX::ThrowIfFailed(hr);
+
+			// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
+			m_bitmaps[dwFrameIndex] = pBitmap;
+		}
+		m_offsets[dwFrameIndex] = { fOffsetX, fOffsetY };
+		m_delays[dwFrameIndex] = dwDelay;
+		m_disposals[dwFrameIndex] = dwDisposal;
+	}
 
 
 
-	//	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
-	//	//auto m_d2dContext = m_d2dManager->GetD2DContext();
+	Utilities::ui_task(Dispatcher, [&]()
+	{
 
-	//	// Finally, get ID2D1Bitmap for this frame
-	//	ComPtr<ID2D1Bitmap> pBitmap;
-
-	//	hr = m_d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap);
-	//	DX::ThrowIfFailed(hr);
-
-	//	// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
-	//	m_bitmaps[dwFrameIndex] = pBitmap;
-	//	/*	}*/
-	//	m_offsets[dwFrameIndex] = { fOffsetX, fOffsetY };
-	//	m_delays[dwFrameIndex] = dwDelay;
-	//	m_disposals[dwFrameIndex] = dwDisposal;
-	//}
-
-	m_stream = pStream;
+		RenderFrame();
+	});
 	PropVariantClear(&var);
+#if DEBUG
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(t2 - t1).count();
 	OutputDebugString(("Duration for LoadImage: " + duration + "ms\r\n")->Data());
+#endif
 }
 
 HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
@@ -534,8 +537,9 @@ HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
 	PROPVARIANT var;
 	PropVariantInit(&var);
 
-	// Default to non-animated gif
-	m_isAnimatedGif = true;
+	//If the GIF contains more than one frame, assume it's animated.
+	if (m_dwFrameCount > 1)
+		m_isAnimatedGif = true;
 
 	hr = pQueryReader->GetMetadataByName(L"/logscrdesc/ColorResolution", &var);
 	if (FAILED(hr))
@@ -544,7 +548,12 @@ HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
 	PropVariantClear(&var);
 
 	HRESULT extHr = ReadGifApplicationExtension(pQueryReader);
-
+	if (FAILED(extHr) || extHr == S_FALSE)
+	{
+		//If we can't find any application extension, default to one repeat.
+		auto behavior = RepeatBehavior{ 1 };
+		m_repeatBehavior = ref new Platform::Box<RepeatBehavior>(behavior);
+	}
 	return hr;
 }
 
@@ -565,19 +574,12 @@ HRESULT GifImageSource::ReadGifApplicationExtension(IWICMetadataQueryReader *pQu
 
 		static LPCSTR strNetscape = "NETSCAPE2.0";
 		static LPCSTR strAnimexts = "ANIMEXTS1.0";
-		//for (ULONG i = 0; i < var.caub.cElems; i++)
-		//{
-		//	// Manual strcmp
-		//	if (*(var.caub.pElems + i) != strNetscape[i])
-		//		return S_FALSE;
-		//}
 
 		std::string str(var.caub.pElems, var.caub.pElems + var.caub.cElems);
 		if (str != strNetscape && str != strAnimexts)
 		{
 			return S_FALSE;
 		}
-
 
 		PropVariantClear(&var);
 		hr = pQueryReader->GetMetadataByName(L"/appext/Data", &var);
@@ -614,15 +616,14 @@ HRESULT GifImageSource::ReadGifApplicationExtension(IWICMetadataQueryReader *pQu
 			}
 		}
 	}
+	return hr;
 }
 
 void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 {
-	//m_d2dManager = Direct2DManager::GetInstance();
 	if (forceRecreate)
 	{
 		Direct2DManager::GetInstance()->Recreate();
-		//	m_d2dManager->Recreate();
 	}
 	if (!m_haveReservedDeviceResources)
 	{
@@ -636,6 +637,8 @@ void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 		CLSCTX_INPROC_SERVER,
 		IID_IWICImagingFactory,
 		(LPVOID*)&m_pIWICFactory);
+
+
 
 	auto dxgiDevice = Direct2DManager::GetInstance()->GetDXGIDevice();
 
@@ -652,7 +655,7 @@ void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 
 bool GifImageSource::BeginDraw()
 {
-	ComPtr<IDXGISurface> surface;
+
 	RECT updateRect = { 0, 0, m_width, m_height };
 	POINT offset = { 0 };
 
@@ -660,15 +663,14 @@ bool GifImageSource::BeginDraw()
 	DX::ThrowIfFailed(
 		reinterpret_cast<IUnknown*>(this)->QueryInterface(IID_PPV_ARGS(&sisNative))
 		);
-
+	ComPtr<IDXGISurface> surface;
 	// Begin drawing - returns a target surface and an offset to use as the top left origin when drawing. 
 	HRESULT beginDrawHR = sisNative->BeginDraw(updateRect, &surface, &offset);
-	//	m_offset = offset;
 	if (SUCCEEDED(beginDrawHR))
 	{
 		auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
-		//	auto m_d2dContext = m_d2dManager->GetD2DContext();
-			// Create render target. 
+
+		// Create render target. 
 		DX::ThrowIfFailed(
 			m_d2dContext->CreateBitmapFromDxgiSurface(surface.Get(), nullptr, &m_surfaceBitmap));
 
@@ -722,11 +724,9 @@ void GifImageSource::EndDraw()
 	// Remove the render target and end drawing. 
 	DX::ThrowIfFailed(m_d2dContext->EndDraw());
 
-
 	m_d2dContext->SetTarget(nullptr);
 
 	m_surfaceBitmap = nullptr;
-
 
 	Microsoft::WRL::ComPtr<ISurfaceImageSourceNative> sisNative;
 	DX::ThrowIfFailed(
@@ -747,7 +747,6 @@ void GifImageSource::StartDurationTimer()
 {
 	if (m_repeatBehavior != nullptr && m_repeatBehavior->Value.Type == RepeatBehaviorType::Duration)
 	{
-		//double milliseconds = duration.Duration * 10000; 
 		m_durationTimer = ref new DispatcherTimer();
 		m_durationTimer->Interval = m_repeatBehavior->Value.Duration;
 		m_durationTickToken = m_durationTimer->Tick += ref new EventHandler<Object^>(this, &GifImageSource::OnDurationEndedTick);
@@ -816,22 +815,32 @@ void GifImageSource::OnTick(Object ^sender, Object ^args)
 
 	try
 	{
-		auto completedLoop = RenderFrame();
-		if (completedLoop)
-		{
-			m_completedLoopCount++;
+		SetNextInterval();
 
-			if (m_repeatBehavior != nullptr)
+		Utilities::timed_task("RenderFrame", [this]()
+		{
+			auto completedLoop = RenderFrame();
+			if (completedLoop)
 			{
-				// Stop animation if this is not a perpetually looping gif
-				if (m_repeatBehavior->Value.Type == RepeatBehaviorType::Count && m_repeatBehavior->Value.Count > 0 && m_repeatBehavior->Value.Count == m_completedLoopCount)
+				m_completedLoopCount++;
+				m_pPreviousRawFrame = nullptr;
+
+				if (m_repeatBehavior != nullptr)
 				{
-					//Reset the gif to it's first frame before we stop
-					RenderFrame();
-					Stop();
+					// Stop animation if this is not a perpetually looping gif
+					if (m_repeatBehavior->Value.Type == RepeatBehaviorType::Count && m_repeatBehavior->Value.Count > 0 && m_repeatBehavior->Value.Count == m_completedLoopCount)
+					{
+						Stop();
+						for (int i = 0; i < m_dwFrameCount; i++)
+						{
+							m_bitmaps.at(i) = nullptr;
+						}
+						m_pRawFrame = nullptr;
+
+					}
 				}
 			}
-		}
+		});
 	}
 	catch (Platform::Exception^)
 	{
@@ -855,3 +864,44 @@ void GifImageSource::OnDurationEndedTick(Object ^sender, Object ^args)
 
 
 
+
+#if WINDOWS_PHONE_DLL
+
+void GifImageSource::OnMemoryTimerTick(Platform::Object ^sender, Platform::Object ^args)
+{
+	GifImageSource::CheckMemoryLimits();
+}
+
+void GifImageSource::CheckMemoryLimits()
+{
+	double mbMemoryLimit = Windows::System::MemoryManager::AppMemoryUsageLimit / 1024 / 1024;
+	double mbMemoryUsed = Windows::System::MemoryManager::AppMemoryUsage / 1024 / 1024;
+	//	OutputDebugString(("Memory usage increased to: " + mbMemoryUsed + "mb / " + mbMemoryLimit + "mb\r\n")->Data());
+	double  percentUsed = (mbMemoryUsed / mbMemoryLimit) * 100;
+	if (m_canCacheMoreFrames == true)
+	{
+		if (percentUsed > 80)
+		{
+			m_canCacheMoreFrames = false;
+			for (int i = 0; i < m_dwFrameCount; i++)
+			{
+				m_bitmaps.at(i) = nullptr;
+			}
+			OutputDebugString(("Stopping bitmap caching and clearing all cached bitmaps, memory usage is " + percentUsed + "%\r\n")->Data());
+		}
+		else if (percentUsed > 50)
+		{
+			m_canCacheMoreFrames = false;
+			OutputDebugString(("Stopping bitmap caching, memory usage is " + percentUsed + "%\r\n")->Data());
+		}
+	}
+	else
+	{
+		if (percentUsed < 50 && m_canCacheMoreFrames == false)
+		{
+			m_canCacheMoreFrames = true;
+			OutputDebugString(("Resuming bitmap caching, memory usage is " + percentUsed + "%\r\n")->Data());
+		}
+	}
+}
+#endif

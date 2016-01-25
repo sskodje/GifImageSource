@@ -120,8 +120,8 @@ namespace GifImageSample
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
             this.Unloaded -= Page_Unloaded;
-            this.Items = null;
-            this.DataContext = null;
+            //this.Items = null;
+            //this.DataContext = null;
             //  GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
         }
     }

@@ -12,6 +12,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Button x:Name="navBackButton"
                 Visibility="Collapsed"
@@ -36,12 +37,26 @@
                              StretchDirection="DownOnly">
                         <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}"
                                Unloaded="Image_Unloaded" />-->
+                        <!--<Image Source="{Binding Uri}"
+                            Loaded="Image_Loaded"
+                               Unloaded="Image_Unloaded" />-->
                         <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
-                            
+                               Loaded="Image_Loaded"
                                Unloaded="Image_Unloaded" />
                     </Viewbox>
                 </DataTemplate>
             </GridView.ItemTemplate>
         </GridView>
+        <StackPanel Orientation="Horizontal"
+                    Grid.Row="2">
+            <Button x:Name="bnAddItems"
+                    Content="add items"
+                    Margin="5"
+                    Click="bnAddItems_Click" />
+            <Button x:Name="bnRemoveItems"
+                    Content="remove items"
+                    Margin="5"
+                    Click="bnRemoveItems_Click" />
+        </StackPanel>
     </Grid>
 </Page>

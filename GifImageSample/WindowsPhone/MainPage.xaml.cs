@@ -38,12 +38,11 @@ namespace GifImageSample
             items.AddRange(Enumerable.Range(1, 23).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
             items.Add(new MyModel(new Uri("http://i.imgur.com/9Bo0CZi.gif")));
             items.Add(new MyModel(new Uri("https://media.giphy.com/media/xT77XR3gI2c7NiDzEY/giphy.gif")));
-            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_prev.gif")));
+            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_bgnd.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/dl_world_anim.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_opt/bunny_bgnd_lzw_gifsicle.gif")));
             items.Add(new MyModel(new Uri("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg/800px-Tour_Eiffel_Wikimedia_Commons.jpg")));
             items.Add(new MyModel(new Uri("http://i.imgur.com/YHoBqLR.gif")));
-
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
         }
@@ -61,12 +60,12 @@ namespace GifImageSample
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-          //  GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
+            //  GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
         }
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
-           // GifImage.AnimationBehavior.OnError-= AnimationBehavior_OnError;
+            // GifImage.AnimationBehavior.OnError-= AnimationBehavior_OnError;
         }
         private async void AppBarButtonLoad_Click(object sender, RoutedEventArgs e)
         {
@@ -115,14 +114,16 @@ namespace GifImageSample
         {
             //  string uri = "ms-appx:///Gifs/19.gif";
             //  XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, new Uri(uri));
-               GifImage.AnimationBehavior.SetImageUriSource(_gifImage,uri);    
+                GifImage.AnimationBehavior.SetImageUriSource(_gifImage,uri);
+            //GifImage.AnimationBehavior.SetAutoStart(_gifImage, false);
             //StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
             //GifImage.AnimationBehavior.SetImageStreamSource(_gifImage, await file.OpenReadAsync());
+
         }
 
         private async void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-           
+
             if (e.AddedItems != null)
             {
                 await OpenGif(((MyModel)e.AddedItems[0]).Uri);

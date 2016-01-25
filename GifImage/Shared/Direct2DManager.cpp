@@ -66,6 +66,7 @@ void Direct2DManager::CreateDeviceResources()
 			nullptr
 			)
 		);
+	
 
 	// Get the Direct3D 11.1 API device. 
 	DX::ThrowIfFailed(
@@ -83,9 +84,6 @@ void Direct2DManager::CreateDeviceResources()
 		m_d2dDevice->CreateDeviceContext(
 			D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
 			&m_d2dContext));
-
-
-
 }
 
 void Direct2DManager::Recreate()
