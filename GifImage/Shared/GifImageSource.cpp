@@ -486,8 +486,8 @@ void GifImageSource::LoadImage(IStream *pStream)
 		PropVariantClear(&var);
 		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
 		fOffsetY = var.uiVal;
-		//Preload the bitmaps for the 10 first frames, to get a smooth start.
-		if (dwFrameIndex < 10)
+		//Preload the bitmaps for the 5 first frames, to get a smooth start.
+		if (dwFrameIndex < 5)
 		{
 			// Set up converter 
 			ComPtr<IWICFormatConverter> pConvertedBitmap;
@@ -516,7 +516,16 @@ void GifImageSource::LoadImage(IStream *pStream)
 		m_disposals[dwFrameIndex] = dwDisposal;
 	}
 
-
+	int haveNonZeroDelays = false;
+	for (int i = 0; i < m_delays.size(); i++)
+	{
+		if (m_delays.at(i) > 0)
+		{
+			haveNonZeroDelays = true;
+			break;
+		}
+	}
+	m_isAnimatedGif = haveNonZeroDelays;
 
 	Utilities::ui_task(Dispatcher, [&]()
 	{
@@ -817,8 +826,8 @@ void GifImageSource::OnTick(Object ^sender, Object ^args)
 	{
 		SetNextInterval();
 
-		Utilities::timed_task("RenderFrame", [this]()
-		{
+		//Utilities::timed_task("RenderFrame", [this]()
+		//{
 			auto completedLoop = RenderFrame();
 			if (completedLoop)
 			{
@@ -836,11 +845,12 @@ void GifImageSource::OnTick(Object ^sender, Object ^args)
 							m_bitmaps.at(i) = nullptr;
 						}
 						m_pRawFrame = nullptr;
-
+						//Move it to first frame
+						RenderFrame();
 					}
 				}
 			}
-		});
+		/*});*/
 	}
 	catch (Platform::Exception^)
 	{
