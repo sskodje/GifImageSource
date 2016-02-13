@@ -334,13 +334,14 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 	{
 		try
 		{
-			auto  src = dynamic_cast<GifImageSource^>(image->Source);
-			image->Unloaded -= src->m_unloadedToken;
-			if (src != nullptr)
+
+			if (source->GetType() == GifImageSource::typeid)
 			{
-				
+				auto src = (GifImageSource^)image->Source;
 				src->ClearResources();
 			}
+			auto token = GetImageUnloadedEventToken(image);
+			image->Unloaded -= token;
 		}
 		catch (Exception^ ex)
 		{
@@ -360,7 +361,8 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 		{
 			if (GetImageUriSource(image) == uriSource)
 			{
-				imageSource->m_unloadedToken = image->Unloaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnUnloaded);
+				auto token= image->Unloaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnUnloaded);
+				SetImageUnloadedEventToken(image,token);
 				image->Source = imageSource;
 
 				if (GetAutoStart(image) == true)
@@ -473,7 +475,7 @@ void AnimationBehavior::OnLoaded(Platform::Object ^sender, Windows::UI::Xaml::Ro
 	auto token = GetImageLoadedEventToken(image);
 
 	image->Loaded -= token;
-	image->ClearValue(s_imageLoadedEventTokenProperty);
+	
 
 	Uri^ sourceUri = GetImageUriSource(image);
 	OutputDebugString(("Loaded image with source: " + sourceUri + "\r\n")->Data());
@@ -488,22 +490,22 @@ void AnimationBehavior::OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::
 	{
 		try
 		{
-			//if (image->Source!= nullptr && image->Source->GetType() == GifImageSource::typeid)
-			//{
-			//	GifImageSource^ src = (GifImageSource^)image->Source;
-			//	//auto token = GetImageUnloadedEventToken(image);
-			//	image->Unloaded -= src->m_unloadedToken;
-			//	//image->ClearValue(s_imageUnloadedEventTokenProperty);
-			//
-
-			//}
+			if (image->Source!= nullptr && image->Source->GetType() == GifImageSource::typeid)
+			{
+				GifImageSource^ src = (GifImageSource^)image->Source;
+				auto token = GetImageUnloadedEventToken(image);
+				image->Unloaded -= token;
+				//image->ClearValue(s_imageUnloadedEventTokenProperty);
+				auto loadedToken = image->Loaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnLoaded);
+				SetImageLoadedEventToken(image, loadedToken);
+			}
 		}
 		catch (Platform::Exception^ ex)
 		{
 			//OnError(nullptr, ex->ToString());
 		}
-		image->ClearValue(s_imageUriValueProperty);
-		image->ClearValue(s_repeatBehaviorProperty);
+		//image->ClearValue(s_imageUriValueProperty);
+		//image->ClearValue(s_repeatBehaviorProperty);
 		if (image->Source != nullptr)
 		{
 

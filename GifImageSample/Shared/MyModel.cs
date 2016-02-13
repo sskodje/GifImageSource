@@ -19,7 +19,7 @@ namespace GifImageSample
         {
             Uri uri = null;
 
-            if (index > 0 && index <= 19)
+            if (index > 0 && index <= 21)
             {
                 uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", index));
             }
@@ -35,7 +35,7 @@ namespace GifImageSample
             else
             {
                 Random r = new Random(index);
-                int i = r.Next(1, 19);
+                int i = r.Next(1, 21);
                 uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", i));
             }
             return uri;

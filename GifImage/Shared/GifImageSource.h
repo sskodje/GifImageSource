@@ -55,7 +55,6 @@ namespace GifImage
 
 
 	internal:
-		Windows::Foundation::EventRegistrationToken m_unloadedToken;
 		/// <summary>
 		/// Clears all resources currently held in-memory.
 		/// </summary>
