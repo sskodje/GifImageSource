@@ -23,7 +23,6 @@ namespace GifImageSample
             {
                 uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", index));
             }
-
             else if (index == 24)
             {
                 // Uri = new Uri("https://i.imgur.com/ZR3QN22.gif");

@@ -125,60 +125,59 @@ bool GifImageSource::RenderFrame()
 {
 	HRESULT hr;
 	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
-
-	auto bCanDraw = BeginDraw();
-
+	bool bCanDraw = BeginDraw();
 	if (bCanDraw)
 	{
-
-		m_d2dContext->Clear();
-
-		if (m_bitmaps.at(m_dwCurrentFrame) != nullptr)
+		Utilities::timed_task("draw cached frames", [&]()
 		{
-			for (uint32 i = 0; i < m_dwCurrentFrame; i++)
+			m_d2dContext->Clear();
+
+			if (m_bitmaps.at(m_dwCurrentFrame) != nullptr)
 			{
-				int disposal = m_disposals[i];
+				for (uint32 i = 0; i < m_dwCurrentFrame; i++)
+				{
+					int disposal = m_disposals[i];
 
-				switch (disposal)
-				{
-				case DISPOSAL_UNSPECIFIED:
-				case DISPOSE_DO_NOT:
-				{
-					hr = GetRawFrame(i);
-					if (SUCCEEDED(hr))
-						m_d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(i));
-					break;
-				}
-				case DISPOSE_BACKGROUND:
-				{
-					auto offset = m_offsets.at(i);
-					hr = GetRawFrame(i);
-					if (SUCCEEDED(hr))
+					switch (disposal)
 					{
-						m_d2dContext->PushAxisAlignedClip(
-							D2D1::RectF(
-								static_cast<float>(offset.x),
-								static_cast<float>(offset.y),
-								static_cast<float>(offset.x + m_pRawFrame->GetPixelSize().width),
-								static_cast<float>(offset.y + m_pRawFrame->GetPixelSize().height)
-								),
-							D2D1_ANTIALIAS_MODE_ALIASED);
-
-
-						m_d2dContext->Clear();
-						m_d2dContext->PopAxisAlignedClip();
+					case DISPOSAL_UNSPECIFIED:
+					case DISPOSE_DO_NOT:
+					{
+						hr = GetRawFrame(i);
+						if (SUCCEEDED(hr))
+							m_d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(i));
+						break;
 					}
-					break;
-				}
-				case DISPOSE_PREVIOUS:
-				default:
-					// We don't need to render the intermediate frame if it's not
-					// going to update the intermediate buffer anyway.
-					break;
+					case DISPOSE_BACKGROUND:
+					{
+						auto offset = m_offsets.at(i);
+						hr = GetRawFrame(i);
+						if (SUCCEEDED(hr))
+						{
+							m_d2dContext->PushAxisAlignedClip(
+								D2D1::RectF(
+									static_cast<float>(offset.x),
+									static_cast<float>(offset.y),
+									static_cast<float>(offset.x + m_pRawFrame->GetPixelSize().width),
+									static_cast<float>(offset.y + m_pRawFrame->GetPixelSize().height)
+									),
+								D2D1_ANTIALIAS_MODE_ALIASED);
+
+
+							m_d2dContext->Clear();
+							m_d2dContext->PopAxisAlignedClip();
+						}
+						break;
+					}
+					case DISPOSE_PREVIOUS:
+					default:
+						// We don't need to render the intermediate frame if it's not
+						// going to update the intermediate buffer anyway.
+						break;
+					}
 				}
 			}
-		}
-
+		});
 		hr = GetRawFrame(m_dwCurrentFrame);
 
 
@@ -194,15 +193,25 @@ bool GifImageSource::RenderFrame()
 		}
 		//draw current frame on top
 		m_d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(m_dwCurrentFrame));
+		Utilities::timed_task("flush", [&]()
+		{
+			m_d2dContext->Flush();
+		});
 
 		if (m_dwCurrentFrame + 1 < m_dwFrameCount&& m_bitmaps.at(m_dwCurrentFrame + 1) == nullptr)
 		{
-			CopyCurrentFrameToBitmap();
+			Utilities::timed_task("CopyCurrentFrameToBitmap", [this]()
+			{
+				CopyCurrentFrameToBitmap();
+			});
 		}
-
+		Utilities::timed_task("EndDraw", [this]()
+		{
+			EndDraw();
+		});
 		SelectNextFrame();
 
-		EndDraw();
+
 	}
 	else
 	{
@@ -218,6 +227,7 @@ bool GifImageSource::RenderFrame()
 //since we need to clear the SurfaceImageSource for each draw operation.
 void GifImageSource::CopyCurrentFrameToBitmap()
 {
+
 	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
 
 	HRESULT hr;
@@ -308,12 +318,19 @@ void GifImageSource::CopyCurrentFrameToBitmap()
 		// going to update the intermediate buffer anyway.
 		break;
 	}
-
-	hr = render->EndDraw(0, 0);
-
+	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	hr = render->EndDraw();
+	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	//auto duration = duration_cast<milliseconds>(t2 - t1).count();
+	//if (duration >= 15)
+	//{
+	//	OutputDebugString(L"foo");
+	//}
 	hr = render->GetBitmap(&m_pPreviousRawFrame);
 
 	render = nullptr;
+
+
 }
 
 HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
@@ -326,8 +343,8 @@ HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 		return S_OK;
 	}
 
-	//Utilities::timed_task("GetRawFrame", [this,uFrameIndex]()
-	//{
+	Utilities::timed_task("GetRawFrame", [this,uFrameIndex]()
+	{
 	IWICFormatConverter *pConverter = nullptr;
 	IWICBitmapFrameDecode *pWicFrame = nullptr;
 	IWICMetadataQueryReader *pFrameMetadataQueryReader = nullptr;
@@ -371,9 +388,9 @@ HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 
 
 
-	if (m_canCacheMoreFrames)
+	if (m_canCacheMoreFrames && m_dwCurrentFrame < MAX_CACHED_FRAMES_PER_GIF)
 	{
-		UINT kbInMemory = ((m_width * m_height) * (m_bitsPerPixel / 8)) / 1024;
+		//UINT kbInMemory = ((m_width * m_height) * (m_bitsPerPixel / 8)) / 1024;
 
 		//if (m_cachedKB + kbInMemory < MAX_MEMORY_KILOBYTES_PER_GIF)
 		//{
@@ -382,7 +399,7 @@ HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 		//}
 		//else
 		//{
-		OutputDebugString(("Rendering frame" + uFrameIndex + "in realtime\r\n")->Data());
+		//OutputDebugString(("Rendering frame" + uFrameIndex + "in realtime\r\n")->Data());
 		//}
 	}
 	PropVariantClear(&propValue);
@@ -392,7 +409,7 @@ HRESULT GifImageSource::GetRawFrame(UINT uFrameIndex)
 	SafeRelease(pFrameMetadataQueryReader);
 
 	return hr;
-	/*});*/
+	});
 }
 
 void GifImageSource::SelectNextFrame()
@@ -486,8 +503,8 @@ void GifImageSource::LoadImage(IStream *pStream)
 		PropVariantClear(&var);
 		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
 		fOffsetY = var.uiVal;
-		//Preload the bitmaps for the 5 first frames, to get a smooth start.
-		if (dwFrameIndex < 5)
+		//Preload the bitmaps for the 10 first frames, to get a smooth start.
+		if (dwFrameIndex < 10)
 		{
 			// Set up converter 
 			ComPtr<IWICFormatConverter> pConvertedBitmap;
@@ -824,10 +841,11 @@ void GifImageSource::OnTick(Object ^sender, Object ^args)
 
 	try
 	{
-		SetNextInterval();
 
-		//Utilities::timed_task("RenderFrame", [this]()
-		//{
+		Utilities::timed_task("RenderFrame", [this]()
+		{
+			SetNextInterval();
+
 			auto completedLoop = RenderFrame();
 			if (completedLoop)
 			{
@@ -845,12 +863,12 @@ void GifImageSource::OnTick(Object ^sender, Object ^args)
 							m_bitmaps.at(i) = nullptr;
 						}
 						m_pRawFrame = nullptr;
-						//Move it to first frame
-						RenderFrame();
+						////Move it to first frame
+						//RenderFrame();
 					}
 				}
 			}
-		/*});*/
+		});
 	}
 	catch (Platform::Exception^)
 	{

@@ -7,7 +7,7 @@ namespace Utilities
 	template <typename Func>
 	static void ui_task(Windows::UI::Core::CoreDispatcher^ dispatcher, Func func)
 	{
-		dispatcher->RunIdleAsync(ref new Windows::UI::Core::IdleDispatchedHandler([=](Windows::UI::Core::IdleDispatchedHandlerArgs^ args)
+		dispatcher->RunAsync(CoreDispatcherPriority::Normal,ref new Windows::UI::Core::DispatchedHandler([=]()
 		{
 			try
 			{

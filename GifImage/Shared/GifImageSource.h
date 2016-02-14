@@ -67,7 +67,7 @@ namespace GifImage
 #define DISPOSE_PREVIOUS          3       /* Restore to previous content */
 
 #define MAX_MEMORY_KILOBYTES_PER_GIF	10240	/* We allocated a max of 10 megabytes of pixel memory per gif, if it is over, the entire GIF have to be decoded in realtime. */
-
+#define MAX_CACHED_FRAMES_PER_GIF	50 
 
 		ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
 		ComPtr<IWICImagingFactory> m_pIWICFactory;
