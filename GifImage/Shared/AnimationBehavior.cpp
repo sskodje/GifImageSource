@@ -335,19 +335,23 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 		try
 		{
 
-			if (source->GetType() == GifImageSource::typeid)
-			{
-				auto src = (GifImageSource^)image->Source;
-				src->ClearResources();
-			}
+			//if (source->GetType() == GifImageSource::typeid)
+			//{
+			auto src = (GifImageSource^)image->Source;
+			src->StopAndClear();
+		//src->ClearResources();
+			/*	}*/
 			auto token = GetImageUnloadedEventToken(image);
 			image->Unloaded -= token;
+			//auto loadedToken = GetImageLoadedEventToken(image);
+			//image->Loaded -= loadedToken;
 		}
 		catch (Exception^ ex)
 		{
 			OnError(nullptr, "ClearImageSource failed with error: " + ex->ToString());
 		}
 	}
+
 	image->Source = nullptr;
 }
 
@@ -361,8 +365,8 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 		{
 			if (GetImageUriSource(image) == uriSource)
 			{
-				auto token= image->Unloaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnUnloaded);
-				SetImageUnloadedEventToken(image,token);
+				auto token = image->Unloaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnUnloaded);
+				SetImageUnloadedEventToken(image, token);
 				image->Source = imageSource;
 
 				if (GetAutoStart(image) == true)

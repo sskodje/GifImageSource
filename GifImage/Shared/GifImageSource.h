@@ -4,6 +4,7 @@
 #include "Direct2DManager.h"
 
 using namespace Windows::UI::Xaml::Media::Animation;
+using namespace concurrency;
 using namespace Windows::Foundation;
 using namespace Platform;;
 namespace GifImage
@@ -56,6 +57,10 @@ namespace GifImage
 
 	internal:
 		/// <summary>
+		/// Stops the animation and clears all resources
+		/// </summary>
+		void StopAndClear();
+		/// <summary>
 		/// Clears all resources currently held in-memory.
 		/// </summary>
 		void ClearResources();
@@ -75,18 +80,20 @@ namespace GifImage
 		ComPtr<ID2D1Bitmap>            m_pPreviousRawFrame;
 		ComPtr<IWICBitmapDecoder> m_pDecoder;
 
-
 		UINT m_width;
 		UINT m_height;
-		UINT m_dwFrameCount;
+		int m_dwFrameCount;
 		bool m_isAnimatedGif;
 		UINT m_completedLoopCount;
-		UINT m_dwCurrentFrame;
+		int m_dwCurrentFrame;
 		UINT m_dwPreviousFrame;
 		UINT m_bitsPerPixel;
 		UINT m_cachedKB;
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
+		bool m_isCachingFrames;
+		bool m_isDestructing;
+		bool m_isRunningRenderTask;
 
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
@@ -94,8 +101,8 @@ namespace GifImage
 		Windows::Foundation::EventRegistrationToken m_tickToken;
 		Windows::Foundation::EventRegistrationToken m_durationTickToken;
 
-
 		std::vector<ComPtr<ID2D1Bitmap>> m_bitmaps;
+		std::vector<ComPtr<ID2D1Bitmap>> m_realtimeBitmapBuffer;
 		std::vector<D2D1_POINT_2F> m_offsets;
 		std::vector<USHORT> m_delays;
 		std::vector<USHORT> m_disposals;
@@ -117,7 +124,7 @@ namespace GifImage
 		void CheckMemoryLimits();
 		void StartDurationTimer();
 		void StopDurationTimer();
-		void SetNextInterval();
+		long SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
 		void CopyCurrentFrameToBitmap();
@@ -126,9 +133,14 @@ namespace GifImage
 		void OnDurationEndedTick(Platform::Object ^sender, Platform::Object ^args);
 		void OnMemoryTimerTick(Platform::Object ^sender, Platform::Object ^args);
 
+		//task<void> m_onTickTask;
 
+		cancellation_token_source cancellationTokenSource;
+		IAsyncAction^ GetRawFramesTask(int startFrame, int endFrame);
+		IAsyncAction^ OnTick();
+		//task<void> OnTick();
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
-		HRESULT GetRawFrame(UINT uFrameIndex);
+		HRESULT GetRawFrame(int uFrameIndex);
 	};
 }

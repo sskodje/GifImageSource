@@ -37,9 +37,7 @@
                              StretchDirection="DownOnly">
                         <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}"
                                Unloaded="Image_Unloaded" />-->
-                        <!--<Image Source="{Binding Uri}"
-                            Loaded="Image_Loaded"
-                               Unloaded="Image_Unloaded" />-->
+
                         <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
                                Loaded="Image_Loaded"
                                Unloaded="Image_Unloaded" />
