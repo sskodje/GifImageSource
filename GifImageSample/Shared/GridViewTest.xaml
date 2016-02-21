@@ -39,6 +39,8 @@
                                Unloaded="Image_Unloaded" />-->
 
                         <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
+                               gs:AnimationBehavior.RepeatBehavior="0:0:5"
+                               
                                Loaded="Image_Loaded"
                                Unloaded="Image_Unloaded" />
                     </Viewbox>

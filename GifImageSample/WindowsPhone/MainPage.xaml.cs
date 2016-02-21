@@ -106,14 +106,14 @@ namespace GifImageSample
 
         private void AppBarButtonOpenGridViewTest_Click(object sender, RoutedEventArgs e)
         {
-            this.Frame.Navigate(typeof(GridViewTest), 20);
+            this.Frame.Navigate(typeof(GridViewTest), 16);
         }
 
 
         private async Task OpenGif(Uri uri)
         {
             //  string uri = "ms-appx:///Gifs/19.gif";
-            //  XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, new Uri(uri));
+              //XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, uri);
                 GifImage.AnimationBehavior.SetImageUriSource(_gifImage,uri);
             //GifImage.AnimationBehavior.SetAutoStart(_gifImage, false);
             //StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);

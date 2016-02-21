@@ -2,11 +2,13 @@
 #include <wincodec.h>
 #include "windows.foundation.h"
 #include "Direct2DManager.h"
+#include <agents.h>
 
 using namespace Windows::UI::Xaml::Media::Animation;
 using namespace concurrency;
 using namespace Windows::Foundation;
-using namespace Platform;;
+using namespace Platform;
+
 namespace GifImage
 {
 	[Windows::Foundation::Metadata::WebHostHidden]
@@ -72,7 +74,8 @@ namespace GifImage
 #define DISPOSE_PREVIOUS          3       /* Restore to previous content */
 
 #define MAX_MEMORY_KILOBYTES_PER_GIF	10240	/* We allocated a max of 10 megabytes of pixel memory per gif, if it is over, the entire GIF have to be decoded in realtime. */
-#define MAX_CACHED_FRAMES_PER_GIF	50 
+#define MAX_CACHED_FRAMES_PER_GIF	50 /* Caching frames usually uses less cpu power than realtime rendering, but it slows down when caching too many frames, so we limit it */
+#define FRAMECOUNT_TO_PRERENDER	5
 
 		ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
 		ComPtr<IWICImagingFactory> m_pIWICFactory;
@@ -82,18 +85,20 @@ namespace GifImage
 
 		UINT m_width;
 		UINT m_height;
-		int m_dwFrameCount;
+		UINT m_dwFrameCount;
 		bool m_isAnimatedGif;
 		UINT m_completedLoopCount;
-		int m_dwCurrentFrame;
+		UINT m_dwCurrentFrame;
 		UINT m_dwPreviousFrame;
 		UINT m_bitsPerPixel;
 		UINT m_cachedKB;
+		UINT m_millisSinceLastMemoryCheck;
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
 		bool m_isCachingFrames;
 		bool m_isDestructing;
 		bool m_isRunningRenderTask;
+
 
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
@@ -107,38 +112,31 @@ namespace GifImage
 		std::vector<USHORT> m_delays;
 		std::vector<USHORT> m_disposals;
 
-		Windows::UI::Xaml::DispatcherTimer^ m_renderTimer;
-		Windows::UI::Xaml::DispatcherTimer^ m_durationTimer;
-		Windows::UI::Xaml::DispatcherTimer^ m_memoryTimer;
+		concurrency::timer<int> *m_durationTimer;
+		concurrency::timer<int> *m_memoryTimer;
+
 		/// <summary>
 		/// Renders a single frame and increments the current frame index.
 		/// </summary>
-		/// <returns>
-		/// True if an animation loop was just completed, false otherwise.
-		/// </returns>
 		bool RenderFrame();
 		void CreateDeviceResources(boolean forceRecreate);
 		bool BeginDraw();
 		void EndDraw();
-
+		void WaitForAsync(IAsyncAction ^A);
 		void CheckMemoryLimits();
 		void StartDurationTimer();
 		void StopDurationTimer();
+		void StartMemoryTimer();
+		void StopMemoryTimer();
 		long SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
 		void CopyCurrentFrameToBitmap();
 
-		void OnTick(Platform::Object ^sender, Platform::Object ^args);
-		void OnDurationEndedTick(Platform::Object ^sender, Platform::Object ^args);
-		void OnMemoryTimerTick(Platform::Object ^sender, Platform::Object ^args);
-
-		//task<void> m_onTickTask;
-
 		cancellation_token_source cancellationTokenSource;
 		IAsyncAction^ GetRawFramesTask(int startFrame, int endFrame);
+
 		IAsyncAction^ OnTick();
-		//task<void> OnTick();
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
 		HRESULT GetRawFrame(int uFrameIndex);

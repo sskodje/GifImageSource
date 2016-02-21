@@ -24,8 +24,9 @@ AnimationBehavior::AnimationBehavior()
 AnimationBehavior::~AnimationBehavior()
 {
 }
+#pragma region Dependency Properties
 
-#pragma region Attached Properties
+
 DependencyProperty^ AnimationBehavior::s_autoStartProperty = DependencyProperty::Register(
 	"AutoStart",
 	Windows::Foundation::EventRegistrationToken::typeid,
@@ -78,7 +79,8 @@ void GifImage::AnimationBehavior::SetImageUnloadedEventToken(UIElement ^ element
 {
 	element->SetValue(s_imageUnloadedEventTokenProperty, value);
 }
-
+#pragma endregion
+#pragma region Attached Properties
 DependencyProperty^ AnimationBehavior::s_repeatBehaviorProperty = DependencyProperty::RegisterAttached(
 	"RepeatBehavior",
 	Windows::UI::Xaml::Media::Animation::RepeatBehavior::typeid,
@@ -219,6 +221,8 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 	//auto repeatBehavior = GetRepeatBehavior(image);
 	if (uriSource != nullptr)
 	{
+
+
 		//if (IsLoaded(image))
 		//{
 		//	Windows::Foundation::EventRegistrationToken token = image->Unloaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnUnloaded);

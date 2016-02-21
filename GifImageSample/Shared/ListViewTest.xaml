@@ -40,7 +40,7 @@
             </ListView.ItemContainerStyle>
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <ItemsStackPanel CacheLength="1" />
+                    <VirtualizingStackPanel Orientation="Vertical" />
                 </ItemsPanelTemplate>
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
@@ -58,7 +58,8 @@
                                      Stretch="Uniform"
                                      StretchDirection="DownOnly">
 
-                                <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}" />
+                                <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
+                                       gs:AnimationBehavior.AutoStart="True" />
                                 <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}" />-->
                                 <!--<i:Interaction.Behaviors>
                                     <core:IncrementalUpdateBehavior Phase="1" />

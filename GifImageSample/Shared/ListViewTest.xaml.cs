@@ -49,6 +49,11 @@ namespace GifImageSample
             this.DataContext = this;
 
             this.InitializeComponent();
+            var scrollViewer = this.listViewTest.GetFirstDescendantOfType<ScrollViewer>();
+            if (scrollViewer != null)
+            {
+                scrollViewer.ViewChanged += scrollViewer_ViewChanged;
+            }
 #if WINDOWS_APP
             this.navBackButton.Style = (Style)Resources["NavigationBackButtonNormalStyle"];
             this.navBackButton.Visibility = Windows.UI.Xaml.Visibility.Visible;
@@ -56,7 +61,14 @@ namespace GifImageSample
             HardwareButtons.BackPressed += HardwareButtons_BackPressed;
 #endif
            // this.NavigationCacheMode = NavigationCacheMode.Disabled;
+
         }
+
+        private void scrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+        {
+            
+        }
+
 #if WINDOWS_PHONE_APP
         void HardwareButtons_BackPressed(object sender, BackPressedEventArgs e)
         {

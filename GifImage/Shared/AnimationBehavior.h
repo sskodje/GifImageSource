@@ -5,6 +5,7 @@
 #include <ppl.h>
 
 using namespace Platform;
+using namespace concurrency;
 using namespace Windows::UI::Xaml::Interop;
 using namespace Windows::UI::Xaml;
 using namespace Windows::Foundation;
@@ -64,6 +65,9 @@ namespace GifImage
 		static Platform::Boolean  GetAutoStart(UIElement^ element);
 		static void SetAutoStart(UIElement^ element, Platform::Boolean value);
 
+
+
+
 		static GifImageSource^ GetGifImageSource(UIElement^ element);
 
 		static event ErrorEventHandler^ OnError;
@@ -78,6 +82,7 @@ namespace GifImage
 		static DependencyProperty^ s_imageUnloadedEventTokenProperty;
 		static DependencyProperty^ s_repeatBehaviorProperty;
 		static DependencyProperty^ s_autoStartProperty;
+
 
 		static void LoadSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);
 		static concurrency::task<GifImageSource^> GetGifImageSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);

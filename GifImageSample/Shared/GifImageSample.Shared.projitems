@@ -15,6 +15,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ListViewTest.xaml.cs">
       <DependentUpon>ListViewTest.xaml</DependentUpon>
     </Compile>
@@ -48,6 +49,7 @@
     <Content Include="$(MSBuildThisFileDirectory)Gifs\10.gif" />
     <Content Include="$(MSBuildThisFileDirectory)Gifs\20.gif" />
     <Content Include="$(MSBuildThisFileDirectory)Gifs\21.gif" />
+    <Content Include="$(MSBuildThisFileDirectory)Gifs\22.gif" />
     <Content Include="$(MSBuildThisFileDirectory)Gifs\6.gif" />
     <Content Include="$(MSBuildThisFileDirectory)Gifs\5.gif" />
     <Content Include="$(MSBuildThisFileDirectory)Gifs\3.gif" />
