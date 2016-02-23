@@ -13,7 +13,6 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!--<controls:GifImage x:Name="_gifImage" />-->
         <Viewbox StretchDirection="DownOnly">
             <Image x:Name="_gifImage"
                    Stretch="Uniform" />
@@ -27,7 +26,6 @@
                       Margin="20"
                       DisplayMemberPath="Uri"
                       SelectionChanged="cbGifs_SelectionChanged">
-
             </ComboBox>
             <AppBarButton x:Name="AppBarButtonLoad"
                           Label="load"

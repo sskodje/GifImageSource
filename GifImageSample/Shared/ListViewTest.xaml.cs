@@ -49,25 +49,14 @@ namespace GifImageSample
             this.DataContext = this;
 
             this.InitializeComponent();
-            var scrollViewer = this.listViewTest.GetFirstDescendantOfType<ScrollViewer>();
-            if (scrollViewer != null)
-            {
-                scrollViewer.ViewChanged += scrollViewer_ViewChanged;
-            }
 #if WINDOWS_APP
             this.navBackButton.Style = (Style)Resources["NavigationBackButtonNormalStyle"];
             this.navBackButton.Visibility = Windows.UI.Xaml.Visibility.Visible;
 #elif WINDOWS_PHONE_APP
             HardwareButtons.BackPressed += HardwareButtons_BackPressed;
 #endif
-           // this.NavigationCacheMode = NavigationCacheMode.Disabled;
-
         }
 
-        private void scrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
-        {
-            
-        }
 
 #if WINDOWS_PHONE_APP
         void HardwareButtons_BackPressed(object sender, BackPressedEventArgs e)
@@ -92,7 +81,6 @@ namespace GifImageSample
             else
                 gifCount = 150;
 
-
             Items = new ObservableCollection<MyModel>(Enumerable.Range(1, gifCount).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
         }
         protected void RaisePropertyChanged(string propertyName)
@@ -109,7 +97,10 @@ namespace GifImageSample
 
         private void bnAddItems_Click(object sender, RoutedEventArgs e)
         {
-            Items = new ObservableCollection<MyModel>(Enumerable.Range(0, 150).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
+            foreach(MyModel model in Enumerable.Range(0, 150).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList())
+            {
+                Items.Add(model);
+            }
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -118,23 +109,6 @@ namespace GifImageSample
                 Frame.GoBack();
         }
 
-        private void Page_Loaded(object sender, RoutedEventArgs e)
-        {
 
-          //  GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
-        }
-
-        private void AnimationBehavior_OnError(object sender, string s)
-        {
-         //   Debug.WriteLine(s);
-        }
-
-        private void Page_Unloaded(object sender, RoutedEventArgs e)
-        {
-            this.Unloaded -= Page_Unloaded;
-            //this.Items = null;
-            //this.DataContext = null;
-            //  GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
-        }
     }
 }

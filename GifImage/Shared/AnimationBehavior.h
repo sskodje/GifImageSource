@@ -1,7 +1,6 @@
 #pragma once
 #include "GifImageSource.h"
 #include <shcore.h>
-#include <ppltasks.h>
 #include <ppl.h>
 
 using namespace Platform;
@@ -15,8 +14,8 @@ using namespace Windows::UI::Xaml::Media::Animation;
 namespace GifImage
 {
 	ref class AnimationBehavior;
-	public delegate void ErrorEventHandler(Object^ sender, Platform::String^ s);
-
+	public delegate void ErrorEventHandler(Object^ sender, Platform::String^ error);
+	public delegate void ImageLoadedEventHandler(Object^ sender, GifImageSource^ imageSource);
 	public ref class AnimationBehavior sealed
 	{
 	public:
@@ -69,7 +68,7 @@ namespace GifImage
 
 
 		static GifImageSource^ GetGifImageSource(UIElement^ element);
-
+		static event ImageLoadedEventHandler^ OnImageLoaded;
 		static event ErrorEventHandler^ OnError;
 
 	private:

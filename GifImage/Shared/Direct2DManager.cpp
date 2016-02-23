@@ -99,8 +99,6 @@ Direct2DManager* Direct2DManager::GetInstance()
 		m_instance = new Direct2DManager();
 	}
 	return m_instance;
-	//return new Direct2DManager();
-
 }
 void Direct2DManager::ReserveInstance()
 {

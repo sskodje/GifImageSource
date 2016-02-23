@@ -192,6 +192,13 @@ void AnimationBehavior::InitAnimation(UIElement^ img, IRandomAccessStream^ strea
 		return;
 	if (streamSource != nullptr)
 	{
+		if (Windows::ApplicationModel::DesignMode::DesignModeEnabled)
+		{
+			BitmapImage^ bitmap = ref new BitmapImage();
+			bitmap->SetSourceAsync(streamSource);
+			image->Source = bitmap;
+			return;
+		}
 		auto loadStreamTask = GetGifImageSourceFromStream(image, streamSource);
 		loadStreamTask.then([image, streamSource](GifImageSource^ source)
 		{
@@ -202,6 +209,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, IRandomAccessStream^ strea
 					image->Source = source;
 					if (GetAutoStart(image) == true)
 						source->Start();
+					OnImageLoaded(image, source);
 				}
 				else
 					OutputDebugString(L"Cancelled GetGifImageSourceFromStream\r\n");
@@ -218,23 +226,15 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 	Image^ image = (Image^)img;
 	if (image == nullptr)
 		return;
-	//auto repeatBehavior = GetRepeatBehavior(image);
+
 	if (uriSource != nullptr)
 	{
-
-
-		//if (IsLoaded(image))
-		//{
-		//	Windows::Foundation::EventRegistrationToken token = image->Unloaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnUnloaded);
-		//	AnimationBehavior::SetImageUnloadedEventToken(image, token);
-		//}
-		//else
-		//{
-		//	Windows::Foundation::EventRegistrationToken token = image->Loaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnLoaded);
-		//	AnimationBehavior::SetImageLoadedEventToken(image, token);
-		//	return;
-		//}
-
+		if (Windows::ApplicationModel::DesignMode::DesignModeEnabled)
+		{
+				BitmapImage^ bitmap = ref new BitmapImage(uriSource);
+				image->Source = bitmap;
+				return;
+		}
 		ClearImageSource(image);
 		if (uriSource->SchemeName == "ms-appx" || uriSource->SchemeName == "ms-appdata")
 		{
@@ -284,7 +284,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 												});
 											});
 										}
-									}).then([file](task<void> t)
+									}).then([file, image](task<void> t)
 									{
 										bool success = false;
 										try
@@ -294,7 +294,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 										}
 										catch (Exception^ ex)
 										{
-											OnError(nullptr, "GifImageSource load failed with error: " + ex->ToString());
+											OnError(image, "GifImageSource load failed with error: " + ex->ToString());
 										}
 
 										if (!success)
@@ -321,7 +321,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 			});
 		}
 		else
-			OnError(nullptr, "Image URI is not in a valid format, Image Source was not set");
+			OnError(image, "Image URI is not in a valid format, Image Source was not set");
 	}
 	else
 	{
@@ -343,8 +343,8 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 			//{
 			auto src = (GifImageSource^)image->Source;
 			src->StopAndClear();
-		//src->ClearResources();
-			/*	}*/
+			//src->ClearResources();
+				/*	}*/
 			auto token = GetImageUnloadedEventToken(image);
 			image->Unloaded -= token;
 			//auto loadedToken = GetImageLoadedEventToken(image);
@@ -352,7 +352,7 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 		}
 		catch (Exception^ ex)
 		{
-			OnError(nullptr, "ClearImageSource failed with error: " + ex->ToString());
+			OnError(image, "ClearImageSource failed with error: " + ex->ToString());
 		}
 	}
 
@@ -375,12 +375,14 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 
 				if (GetAutoStart(image) == true)
 					imageSource->Start();
+				OnImageLoaded(image, imageSource);
+
 			}
 			else
 				OutputDebugString(L"Cancelled LoadFromStorageFile\r\n");
 		}
 		else
-			OnError(nullptr, "Could not create GifImageSource, source was not set.");
+			OnError(image, "Could not create GifImageSource, source was not set.");
 
 	}).then([image, uriSource](task<void> t)
 	{
@@ -393,7 +395,7 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 		catch (Exception^ ex)
 		{
 			OutputDebugString(ex->Message->Data());
-			OnError(nullptr, "GifImageSource load failed with error: " + ex->ToString());
+			OnError(image, "GifImageSource load failed with error: " + ex->ToString());
 		}
 
 		if (!success)

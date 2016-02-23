@@ -344,7 +344,7 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 		startRenderTask = true;
 		break;
 	}
-	if (!m_isCachingFrames &&startRenderTask)// m_bitmaps.at(min(m_dwCurrentFrame+1,m_dwFrameCount-1))==nullptr)
+	if (!m_isCachingFrames &&startRenderTask)
 	{
 		m_isCachingFrames = true;
 		int startFrame = startIndex;
@@ -367,7 +367,6 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 			catch (Exception^ ex)
 			{
 				OutputDebugString(ex->Message->Data());
-				//OnError(nullptr, "GifImageSource load failed with error: " + ex->ToString());
 			}
 
 			if (!success)
@@ -404,8 +403,6 @@ IAsyncAction^ GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 {
 	return create_async([this, startFrame, endFrame]() -> void
 	{
-		//high_resolution_clock::time_point t1 = high_resolution_clock::now();
-
 		if (startFrame > m_dwFrameCount || endFrame > m_dwFrameCount)
 			return;
 		int start = startFrame;
@@ -506,12 +503,6 @@ IAsyncAction^ GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 			}
 			end = min(m_dwCurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
 		}
-
-
-
-		//high_resolution_clock::time_point t2 = high_resolution_clock::now();
-		//auto duration = duration_cast<milliseconds>(t2 - t1).count();
-		//OutputDebugString(("Duration for GetRawFrameTask: " + duration + "ms\r\n")->Data());
 	});
 }
 
@@ -548,9 +539,9 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 
 void GifImageSource::LoadImage(IStream *pStream)
 {
-	//#if DEBUG
+	#if DEBUG
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
-	//#endif
+	#endif
 	HRESULT hr = S_OK;
 	PROPVARIANT var;
 
@@ -640,28 +631,17 @@ void GifImageSource::LoadImage(IStream *pStream)
 		m_disposals[dwFrameIndex] = dwDisposal;
 	}
 
-	//int haveNonZeroDelays = false;
-	//for (int i = 0; i < m_delays.size(); i++)
-	//{
-	//	if (m_delays.at(i) > 0)
-	//	{
-	//		haveNonZeroDelays = true;
-	//		break;
-	//	}
-	//}
-	//m_isAnimatedGif = haveNonZeroDelays;
-
 	Utilities::ui_task(Dispatcher, [&]()
 	{
 		RenderFrame();
 	});
 
 	PropVariantClear(&var);
-	//#if DEBUG
+	#if DEBUG
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(t2 - t1).count();
 	OutputDebugString(("Duration for LoadImage: " + duration + "ms\r\n")->Data());
-	//#endif
+	#endif
 }
 
 HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
@@ -870,12 +850,7 @@ void GifImageSource::EndDraw()
 }
 
 
-void GifImageSource::Restart()
-{
-	m_completedLoopCount = 0;
-	StopDurationTimer();
-	StartDurationTimer();
-}
+
 void GifImageSource::StartDurationTimer()
 {
 	if (m_durationTimer == nullptr && m_repeatBehavior != nullptr && m_repeatBehavior->Value.Type == RepeatBehaviorType::Duration)
@@ -890,9 +865,6 @@ void GifImageSource::StartDurationTimer()
 			}
 			Utilities::ui_task(Dispatcher, [this]()
 			{
-				//m_dwCurrentFrame = 0;
-				//RenderFrame();
-
 				Stop();
 				m_dwCurrentFrame = 0;
 				RenderFrame();
@@ -961,7 +933,6 @@ void GifImageSource::Start()
 		catch (Exception^ ex)
 		{
 			OutputDebugString(ex->ToString()->Data());
-			//OnError(nullptr, "GifImageSource load failed with error: " + ex->ToString());
 		}
 		OutputDebugString(L"Render task stopped\r\n");
 		if (m_isDestructing && isCanceled)
@@ -974,8 +945,6 @@ void GifImageSource::Start()
 
 	StartDurationTimer();
 }
-
-
 
 void GifImageSource::StopAndClear()
 {
@@ -1011,8 +980,6 @@ IAsyncAction^ GifImageSource::OnTick()
 				m_millisSinceLastMemoryCheck = 0;
 			}
 
-
-
 			long span = SetNextInterval();
 
 			HRESULT hr = GetRawFrame(m_dwCurrentFrame);
@@ -1046,8 +1013,6 @@ IAsyncAction^ GifImageSource::OnTick()
 								}
 								m_pRawFrame = nullptr;
 								doBreak = true;
-								////Move it to first frame
-								//RenderFrame();
 							}
 						}
 					}

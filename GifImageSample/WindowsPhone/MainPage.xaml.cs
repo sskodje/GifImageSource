@@ -1,22 +1,10 @@
 ﻿using GifImage;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading.Tasks;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkID=390556
@@ -32,7 +20,8 @@ namespace GifImageSample
         {
             this.DataContext = this;
             this.InitializeComponent();
-            GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
+            AnimationBehavior.OnError += AnimationBehavior_OnError;
+            AnimationBehavior.OnImageLoaded += AnimationBehavior_OnImageLoaded;
             List<MyModel> items = new List<MyModel>();
 
             items.AddRange(Enumerable.Range(1, 23).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
@@ -47,9 +36,15 @@ namespace GifImageSample
             this.cbGifs.SelectedItem = items[0];
         }
 
+        private void AnimationBehavior_OnImageLoaded(object sender, GifImageSource imageSource)
+        {
+            BusyIndicator.IsActive = false;
+        }
+
         private void AnimationBehavior_OnError(object sender, string str)
         {
             Debug.WriteLine(str);
+            BusyIndicator.IsActive = false;
         }
 
         /// <summary>
@@ -60,41 +55,31 @@ namespace GifImageSample
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-            //  GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
         }
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
-            // GifImage.AnimationBehavior.OnError-= AnimationBehavior_OnError;
         }
-        private async void AppBarButtonLoad_Click(object sender, RoutedEventArgs e)
+        private void AppBarButtonLoad_Click(object sender, RoutedEventArgs e)
         {
-            //  string uri = "http://i.imgur.com/0GNs9Lt.jpg";
-            // string uri = "http://i.imgur.com/YHoBqLR.gif";
-            //  string uri = "ms-appx:///Gifs/19.gif";
-            //  XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, new Uri(uri));
-            //   GifImage.AnimationBehavior.SetImageUriSource(_gifImage, new Uri(uri));    
-            //    StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
-            //  GifImage.AnimationBehavior.SetImageStreamSource(_gifImage, await file.OpenReadAsync());
-
-            await OpenGif(((MyModel)this.cbGifs.SelectedItem).Uri);
+             OpenGif(((MyModel)this.cbGifs.SelectedItem).Uri);
         }
 
         private void AppBarButtonUnload_Click(object sender, RoutedEventArgs e)
         {
-            GifImage.AnimationBehavior.SetImageUriSource(_gifImage, null);
+            AnimationBehavior.SetImageUriSource(_gifImage, null);
         }
 
         private void AppBarButtonPlay_Click(object sender, RoutedEventArgs e)
         {
-            GifImageSource source = GifImage.AnimationBehavior.GetGifImageSource(_gifImage);
+            GifImageSource source = AnimationBehavior.GetGifImageSource(_gifImage);
             if (source != null)
                 source.Start();
         }
 
         private void AppBarButtonPause_Click(object sender, RoutedEventArgs e)
         {
-            GifImageSource source = GifImage.AnimationBehavior.GetGifImageSource(_gifImage);
+            GifImageSource source = AnimationBehavior.GetGifImageSource(_gifImage);
             if (source != null)
                 source.Stop();
         }
@@ -109,30 +94,23 @@ namespace GifImageSample
             this.Frame.Navigate(typeof(GridViewTest), 16);
         }
 
-
-        private async Task OpenGif(Uri uri)
+        private void OpenGif(Uri uri)
         {
-            //  string uri = "ms-appx:///Gifs/19.gif";
-              //XamlAnimatedGif.AnimationBehavior.SetSourceUri(_gifImage, uri);
-                GifImage.AnimationBehavior.SetImageUriSource(_gifImage,uri);
-            //GifImage.AnimationBehavior.SetAutoStart(_gifImage, false);
-            //StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
-            //GifImage.AnimationBehavior.SetImageStreamSource(_gifImage, await file.OpenReadAsync());
-
+            AnimationBehavior.SetImageUriSource(_gifImage, uri);
+            BusyIndicator.IsActive = true;
         }
 
-        private async void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-
             if (e.AddedItems != null)
             {
-                await OpenGif(((MyModel)e.AddedItems[0]).Uri);
+                 OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
         }
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
+            AnimationBehavior.OnError -= AnimationBehavior_OnError;
         }
     }
 }

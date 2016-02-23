@@ -1,5 +1,4 @@
-﻿<Page x:Class="GifImageSample.MainPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:local="using:GifImageSample"
       xmlns:gs="using:GifImage"
@@ -7,11 +6,22 @@
       xmlns:i="using:Microsoft.Xaml.Interactivity"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:Primitives="using:Telerik.UI.Xaml.Controls.Primitives"
+      x:Class="GifImageSample.MainPage"
       mc:Ignorable="d"
       Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
       Unloaded="Page_Unloaded">
     <Page.BottomAppBar>
         <CommandBar>
+
+            <CommandBar.SecondaryCommands>
+                <AppBarButton x:Name="AppBarButtonOpenListViewTest"
+                              Label="Open ListView test"
+                              Click="AppBarButtonOpenListViewTest_Click" />
+                <AppBarButton x:Name="AppBarButtonOpenGridViewTest"
+                              Label="Open GridView test"
+                              Click="AppBarButtonOpenGridViewTest_Click" />
+            </CommandBar.SecondaryCommands>
 
             <AppBarButton x:Name="AppBarButtonLoad"
                           Icon="Download"
@@ -29,14 +39,6 @@
                           Icon="Pause"
                           Label="Pause"
                           Click="AppBarButtonPause_Click" />
-            <CommandBar.SecondaryCommands>
-                <AppBarButton x:Name="AppBarButtonOpenListViewTest"
-                              Label="Open ListView test"
-                              Click="AppBarButtonOpenListViewTest_Click" />
-                <AppBarButton x:Name="AppBarButtonOpenGridViewTest"
-                              Label="Open GridView test"
-                              Click="AppBarButtonOpenGridViewTest_Click" />
-            </CommandBar.SecondaryCommands>
         </CommandBar>
     </Page.BottomAppBar>
     <Grid>
@@ -47,13 +49,17 @@
         <ComboBox x:Name="cbGifs"
                   Margin="5"
                   DisplayMemberPath="Uri"
-                  SelectionChanged="cbGifs_SelectionChanged">
+                  SelectionChanged="cbGifs_SelectionChanged" />
 
-        </ComboBox>
         <Viewbox Grid.Row="1"
                  StretchDirection="DownOnly">
             <Image x:Name="_gifImage"
+                   gs:AnimationBehavior.ImageUriSource="http://i.imgur.com/9Bo0CZi.gif"
                    Stretch="Uniform" />
         </Viewbox>
+        <ProgressRing x:Name="BusyIndicator"
+                                     Grid.Row="1"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center" />
     </Grid>
 </Page>

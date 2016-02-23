@@ -16,7 +16,6 @@ namespace GifImage
 	{
 	public:
 		GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior);
-		//GifImageSource(int width, int height, IBox<RepeatBehavior>^ repeatBehavior);
 		virtual ~GifImageSource();
 
 		/// <summary>
@@ -36,6 +35,22 @@ namespace GifImage
 		}
 
 		/// <summary>
+		/// Gets the current frame.
+		/// </summary>
+		property int CurrentFrame
+		{
+			int get() { return m_dwCurrentFrame; }
+		}
+
+		/// <summary>
+		/// Gets the total number of frames.
+		/// </summary>
+		property int FrameCount
+		{
+			int get() { return m_dwFrameCount; }
+		}
+
+		/// <summary>
 		/// Starts the animation, if image is animated.
 		/// </summary>
 		void Start();
@@ -44,12 +59,6 @@ namespace GifImage
 		/// Stops the animation.
 		/// </summary>
 		void Stop();
-
-		/// <summary>
-		/// Resets the animation to the first frame.
-		/// </summary>
-		void Restart();
-
 
 		/// <summary>
 		/// Loads the image from the specified image stream.

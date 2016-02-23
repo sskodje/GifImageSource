@@ -24,23 +24,11 @@
                   Grid.Row="1">
             <GridView.ItemTemplate>
                 <DataTemplate>
-                    <!--<Viewbox Height="100"
-                             Stretch="Uniform">
-                    <controls:GifImage UriSource="{Binding Uri}" 
-                                       />
-                    </Viewbox>-->
-                    <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}"
-                           Height="100"/>-->
                     <Viewbox Height="80"
                              Width="150"
                              Stretch="Uniform"
                              StretchDirection="DownOnly">
-                        <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}"
-                               Unloaded="Image_Unloaded" />-->
-
                         <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
-                               gs:AnimationBehavior.RepeatBehavior="0:0:5"
-                               
                                Loaded="Image_Loaded"
                                Unloaded="Image_Unloaded" />
                     </Viewbox>
