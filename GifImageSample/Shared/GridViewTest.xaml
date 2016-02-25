@@ -8,10 +8,11 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Background="DimGray">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Button x:Name="navBackButton"
                 Visibility="Collapsed"
@@ -23,24 +24,27 @@
                   Grid.Row="1">
             <GridView.ItemTemplate>
                 <DataTemplate>
-                    <!--<Viewbox Height="100"
-                             Stretch="Uniform">
-                    <controls:GifImage UriSource="{Binding Uri}" 
-                                       />
-                    </Viewbox>-->
-                    <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}"
-                           Height="100"/>-->
                     <Viewbox Height="80"
                              Width="150"
                              Stretch="Uniform"
                              StretchDirection="DownOnly">
-                        <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}"
-                               Unloaded="Image_Unloaded" />-->
-                        <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}" 
-                               Unloaded="Image_Unloaded"/>
+                        <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
+                               Loaded="Image_Loaded"
+                               Unloaded="Image_Unloaded" />
                     </Viewbox>
                 </DataTemplate>
             </GridView.ItemTemplate>
         </GridView>
+        <StackPanel Orientation="Horizontal"
+                    Grid.Row="2">
+            <Button x:Name="bnAddItems"
+                    Content="add items"
+                    Margin="5"
+                    Click="bnAddItems_Click" />
+            <Button x:Name="bnRemoveItems"
+                    Content="remove items"
+                    Margin="5"
+                    Click="bnRemoveItems_Click" />
+        </StackPanel>
     </Grid>
 </Page>

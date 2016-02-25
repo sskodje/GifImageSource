@@ -55,8 +55,9 @@ namespace GifImageSample
 #elif WINDOWS_PHONE_APP
             HardwareButtons.BackPressed += HardwareButtons_BackPressed;
 #endif
-           // this.NavigationCacheMode = NavigationCacheMode.Disabled;
         }
+
+
 #if WINDOWS_PHONE_APP
         void HardwareButtons_BackPressed(object sender, BackPressedEventArgs e)
         {
@@ -80,7 +81,6 @@ namespace GifImageSample
             else
                 gifCount = 150;
 
-
             Items = new ObservableCollection<MyModel>(Enumerable.Range(1, gifCount).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
         }
         protected void RaisePropertyChanged(string propertyName)
@@ -97,7 +97,10 @@ namespace GifImageSample
 
         private void bnAddItems_Click(object sender, RoutedEventArgs e)
         {
-            Items = new ObservableCollection<MyModel>(Enumerable.Range(0, 150).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
+            foreach(MyModel model in Enumerable.Range(0, 150).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList())
+            {
+                Items.Add(model);
+            }
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -106,19 +109,6 @@ namespace GifImageSample
                 Frame.GoBack();
         }
 
-        private void Page_Loaded(object sender, RoutedEventArgs e)
-        {
-          //  GifImage.AnimationBehavior.OnError += AnimationBehavior_OnError;
-        }
 
-        private void AnimationBehavior_OnError(object sender, string s)
-        {
-         //   Debug.WriteLine(s);
-        }
-
-        private void Page_Unloaded(object sender, RoutedEventArgs e)
-        {
-          //  GifImage.AnimationBehavior.OnError -= AnimationBehavior_OnError;
-        }
     }
 }

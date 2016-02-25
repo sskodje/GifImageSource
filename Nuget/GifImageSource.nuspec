@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>GifImageSource</id>
+        <version>1.0.0</version>
+        <authors>Sverre Kristoffer Skodje</authors>
+        <projectUrl>https://github.com/sskodje/GifImageSource</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>GifImageSource is a Windows Runtime Component for WinRT, Windows Phone 8 and Universal Windows projects, made for rendering GIF images in a resource efficient way using Direct2D</description>
+        <tags>animated gif winrt windows-phone</tags>
+        <references>
+            <reference file="GifImage.winmd" />
+        </references>
+    </metadata>
+	  <files>
+        <file src="targets\netcore45\GifImageSource.targets" target="build\netcore45\GifImageSource.targets" />
+        <file src="targets\uap10.0\GifImageSource.targets" target="build\uap10.0\GifImageSource.targets" />
+		<file src="targets\wpa\GifImageSource.targets" target="build\wpa\GifImageSource.targets" />
+
+        <!-- x86 -->        
+        <file src="..\Win32\Release\GifImage.GifImageSource.WindowsPhone\GifImageSource.WindowsPhone.dll" target="runtimes\win10-x86\native\GifImage.dll" /> 
+		<file src="..\Win32\Release\GifImage.GifImageSource.WindowsPhone\GifImage.pri" target="runtimes\win10-x86\native\GifImage.pri" />		
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImageSource.Windows.dll" target="build\netcore45\x86\GifImage.dll" /> 
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImage.winmd" target="build\netcore45\x86\GifImage.winmd" /> 
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImage.pri" target="build\netcore45\x86\GifImage.pri" /> 		
+        <file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImageSource.Windows.dll" target="lib\netcore45\GifImage.dll" />
+		<file src="..\Win32\Release\GifImage.GifImageSource.WindowsPhone\GifImageSource.WindowsPhone.dll" target="build\wpa\x86\GifImage.dll" /> 
+		<file src="..\Win32\Release\GifImage.GifImageSource.WindowsPhone\GifImage.winmd" target="build\wpa\x86\GifImage.winmd" /> 
+		<file src="..\Win32\Release\GifImage.GifImageSource.WindowsPhone\GifImage.pri" target="build\wpa\x86\GifImage.pri" /> 		
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImage.pri" target="lib\netcore45\GifImage.pri" />
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImage.winmd" target="lib\netcore45\GifImage.winmd" />
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImage.winmd" target="lib\uap10.0\GifImage.winmd" />
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImageSource.Windows.dll" target="lib\wpa\GifImage.dll" />
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImage.pri" target="lib\wpa\GifImage.pri" />
+		<file src="..\Win32\Release\GifImage.GifImageSource.Windows\GifImage.winmd" target="lib\wpa\GifImage.winmd" />
+
+
+        <!-- x64 -->        
+        <file src="..\x64\Release\GifImage.GifImageSource.Windows\GifImageSource.Windows.dll" target="runtimes\win10-x64\native\GifImage.dll" />  
+		<file src="..\x64\Release\GifImage.GifImageSource.Windows\GifImage.pri" target="runtimes\win10-x64\native\GifImage.pri" />  
+		<file src="..\x64\Release\GifImage.GifImageSource.Windows\GifImageSource.Windows.dll" target="build\netcore45\x64\GifImage.dll" /> 
+		<file src="..\x64\Release\GifImage.GifImageSource.Windows\GifImage.winmd" target="build\netcore45\x64\GifImage.winmd" />  
+		<file src="..\x64\Release\GifImage.GifImageSource.Windows\GifImage.pri" target="build\netcore45\x64\GifImage.pri" /> 
+
+
+        <!-- ARM -->        
+        <file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImageSource.WindowsPhone.dll" target="runtimes\win10-arm\native\GifImage.dll" />  
+		<file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImage.pri" target="runtimes\win10-arm\native\GifImage.pri" />  
+		<file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImageSource.WindowsPhone.dll" target="build\netcore45\ARM\GifImage.dll" /> 
+		<file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImage.winmd" target="build\netcore45\ARM\GifImage.winmd" /> 
+		<file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImage.pri" target="build\netcore45\ARM\GifImage.pri" /> 		
+		<file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImageSource.WindowsPhone.dll" target="build\wpa\ARM\GifImage.dll" /> 
+		<file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImage.winmd" target="build\wpa\ARM\GifImage.winmd" /> 
+		<file src="..\ARM\Release\GifImage.GifImageSource.WindowsPhone\GifImage.pri" target="build\wpa\ARM\GifImage.pri" /> 
+    </files>
+</package>

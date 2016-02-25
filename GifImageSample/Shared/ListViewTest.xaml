@@ -9,11 +9,9 @@
       xmlns:i="using:Microsoft.Xaml.Interactivity"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      mc:Ignorable="d"
-      Loaded="Page_Loaded"
-      Unloaded="Page_Unloaded">
+      mc:Ignorable="d">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Background="DimGray">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -40,7 +38,7 @@
             </ListView.ItemContainerStyle>
             <ListView.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <ItemsStackPanel CacheLength="2" />
+                    <VirtualizingStackPanel Orientation="Vertical" />
                 </ItemsPanelTemplate>
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
@@ -50,31 +48,20 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <!--<i:Interaction.Behaviors>
-                            <core:IncrementalUpdateBehavior Phase="0" />
-                        </i:Interaction.Behaviors>-->
                         <StackPanel Margin="5">
                             <Viewbox Height="100"
                                      Stretch="Uniform"
                                      StretchDirection="DownOnly">
 
-                                <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"/>
-                                <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}" />-->
-                                <!--<i:Interaction.Behaviors>
-                                    <core:IncrementalUpdateBehavior Phase="1" />
-                                </i:Interaction.Behaviors>-->
+                                <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
+                                       gs:AnimationBehavior.AutoStart="True" />
                             </Viewbox>
                             <TextBlock Margin="5"
                                        HorizontalAlignment="Center"
                                        Text="{Binding Uri}">
-                                                        <!--<i:Interaction.Behaviors>
-                            <core:IncrementalUpdateBehavior Phase="2" />
-                        </i:Interaction.Behaviors>-->
                             </TextBlock>
                         </StackPanel>
                     </Grid>
-                    <!--<Image gif:AnimationBehavior.SourceUri="{Binding Uri}"
-                           Height="100"/>-->
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>

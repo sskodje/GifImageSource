@@ -29,7 +29,7 @@ namespace GifImageSample
     /// </summary>
     public sealed partial class GridViewTest : Page
     {
-        public List<MyModel> Items { get; set; }
+        public ObservableCollection<MyModel> Items { get; set; }
         public GridViewTest()
         {
             this.DataContext = this;
@@ -41,7 +41,7 @@ namespace GifImageSample
             HardwareButtons.BackPressed += HardwareButtons_BackPressed;
 #endif
 
-          //  this.NavigationCacheMode = NavigationCacheMode.Disabled;
+            //   this.NavigationCacheMode = NavigationCacheMode.Disabled;
         }
 
 
@@ -69,7 +69,12 @@ namespace GifImageSample
                 gifCount = 50;
 
 
-            Items = Enumerable.Range(1, gifCount).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList();
+            Items = new ObservableCollection<MyModel>(Enumerable.Range(1, gifCount).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
+        }
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            navBackButton.Click -= Button_Click;
         }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
@@ -79,8 +84,26 @@ namespace GifImageSample
 
         private void Image_Unloaded(object sender, RoutedEventArgs e)
         {
+            ((Image)sender).Unloaded -= Image_Unloaded;
+            // ((Image)sender).Source = null;
             //GifImage.AnimationBehavior.SetGifImageUri(((Image)sender), null);
-         //   XamlAnimatedGif.AnimationBehavior.SetSourceUri((Image)sender, null);
+            //   XamlAnimatedGif.AnimationBehavior.SetSourceUri((Image)sender, null);
+        }
+
+        private void bnAddItems_Click(object sender, RoutedEventArgs e)
+        {
+            Items.Add(new MyModel(MyModel.GetSampleUriFromIndex(new Random().Next(1, 22))));
+        }
+
+        private void bnRemoveItems_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.Items.Count > 0)
+            this.Items.Remove(this.Items.Last());
+        }
+
+        private void Image_Loaded(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }
