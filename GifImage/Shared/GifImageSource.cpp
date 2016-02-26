@@ -108,14 +108,6 @@ void GifImageSource::ClearResources()
 	m_repeatBehavior = nullptr;
 	m_canCacheMoreFrames = false;
 
-	//for (int i = 0; i < m_dwFrameCount; i++)
-	//{
-	//	m_realtimeBitmapBuffer[i] = nullptr;
-	//	m_bitmaps[i] = nullptr;
-
-	//	//m_delays[i] = 0;
-	//	//m_disposals[i] = 0;
-	//}
 	m_realtimeBitmapBuffer.clear();
 	m_bitmaps.clear();
 	m_offsets.clear();
@@ -142,8 +134,8 @@ bool GifImageSource::RenderFrame()
 	bool bCanDraw = BeginDraw();
 	if (bCanDraw)
 	{
-		auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
-		m_d2dContext->Clear();
+		auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+		d2dContext->Clear();
 
 		if (m_bitmaps.at(m_dwCurrentFrame) != nullptr)
 		{
@@ -157,14 +149,14 @@ bool GifImageSource::RenderFrame()
 				case DISPOSAL_UNSPECIFIED:
 				case DISPOSE_DO_NOT:
 				{
-					m_d2dContext->DrawImage(bitmap, m_offsets.at(i));
+					d2dContext->DrawImage(bitmap, m_offsets.at(i));
 					break;
 				}
 				case DISPOSE_BACKGROUND:
 				{
 					auto offset = m_offsets.at(i);
 
-					m_d2dContext->PushAxisAlignedClip(
+					d2dContext->PushAxisAlignedClip(
 						D2D1::RectF(
 							static_cast<float>(offset.x),
 							static_cast<float>(offset.y),
@@ -174,8 +166,8 @@ bool GifImageSource::RenderFrame()
 						D2D1_ANTIALIAS_MODE_ALIASED);
 
 
-					m_d2dContext->Clear();
-					m_d2dContext->PopAxisAlignedClip();
+					d2dContext->Clear();
+					d2dContext->PopAxisAlignedClip();
 
 					break;
 				}
@@ -198,11 +190,11 @@ bool GifImageSource::RenderFrame()
 
 		if (m_pPreviousRawFrame != nullptr)
 		{
-			m_d2dContext->DrawImage(m_pPreviousRawFrame.Get());
+			d2dContext->DrawImage(m_pPreviousRawFrame.Get());
 		}
 		//draw current frame on top
-		m_d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(m_dwCurrentFrame));
-		m_d2dContext->Flush();
+		d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(m_dwCurrentFrame));
+		d2dContext->Flush();
 
 
 		if (m_dwCurrentFrame + 1 < m_dwFrameCount&& m_bitmaps.at(m_dwCurrentFrame + 1) == nullptr)
@@ -226,19 +218,18 @@ bool GifImageSource::RenderFrame()
 //since we need to clear the SurfaceImageSource for each draw operation.
 void GifImageSource::CopyCurrentFrameToBitmap()
 {
-	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
-	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+	auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
 
 	HRESULT hr;
 	//This is a bitmaprender we use to create the bitmaps off-screen.
-	ComPtr<ID2D1BitmapRenderTarget> render = 0;
-	m_d2dContext->CreateCompatibleRenderTarget(&render);
+	ComPtr<ID2D1BitmapRenderTarget> renderTarget = 0;
+	d2dContext->CreateCompatibleRenderTarget(&renderTarget);
 
-	render->BeginDraw();
-	render->Clear();
+	renderTarget->BeginDraw();
+	renderTarget->Clear();
 
 	if (m_pPreviousRawFrame != nullptr)
-		render->DrawBitmap(m_pPreviousRawFrame.Get());
+		renderTarget->DrawBitmap(m_pPreviousRawFrame.Get());
 	else if (m_dwCurrentFrame > 0)
 	{
 		//In this situation we have missing frames in the cache, so we have to draw each previous frame from 0 to m_dwCurrentFrame
@@ -259,17 +250,17 @@ void GifImageSource::CopyCurrentFrameToBitmap()
 			case DISPOSAL_UNSPECIFIED:
 			case DISPOSE_DO_NOT:
 			{
-				render->DrawBitmap(bitmap, rect);
+				renderTarget->DrawBitmap(bitmap, rect);
 				break;
 			}
 			case DISPOSE_BACKGROUND:
 			{
-				render->PushAxisAlignedClip(
+				renderTarget->PushAxisAlignedClip(
 					rect,
 					D2D1_ANTIALIAS_MODE_ALIASED);
 
-				render->Clear();
-				render->PopAxisAlignedClip();
+				renderTarget->Clear();
+				renderTarget->PopAxisAlignedClip();
 				break;
 			}
 			case DISPOSE_PREVIOUS:
@@ -295,19 +286,19 @@ void GifImageSource::CopyCurrentFrameToBitmap()
 	case DISPOSAL_UNSPECIFIED:
 	case DISPOSE_DO_NOT:
 	{
-		render->DrawBitmap(m_pRawFrame.Get(), rect);
+		renderTarget->DrawBitmap(m_pRawFrame.Get(), rect);
 		break;
 	}
 	case DISPOSE_BACKGROUND:
 	{
 
-		render->PushAxisAlignedClip(
+		renderTarget->PushAxisAlignedClip(
 			rect,
 			D2D1_ANTIALIAS_MODE_ALIASED);
 
 
-		render->Clear();
-		render->PopAxisAlignedClip();
+		renderTarget->Clear();
+		renderTarget->PopAxisAlignedClip();
 
 		break;
 	}
@@ -318,15 +309,11 @@ void GifImageSource::CopyCurrentFrameToBitmap()
 		break;
 	}
 
-	hr = render->EndDraw();
+	hr = renderTarget->EndDraw();
 
-	hr = render->GetBitmap(&m_pPreviousRawFrame);
+	hr = renderTarget->GetBitmap(&m_pPreviousRawFrame);
 
-	render = nullptr;
-	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	//auto duration = duration_cast<milliseconds>(t2 - t1).count();
-	//OutputDebugString(("Duration for CopyFrameToBitmap: " + duration + "ms\r\n")->Data());
-
+	renderTarget = nullptr;
 }
 
 
@@ -539,9 +526,6 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 
 void GifImageSource::LoadImage(IStream *pStream)
 {
-	#if DEBUG
-	high_resolution_clock::time_point t1 = high_resolution_clock::now();
-	#endif
 	HRESULT hr = S_OK;
 	PROPVARIANT var;
 
@@ -615,12 +599,12 @@ void GifImageSource::LoadImage(IStream *pStream)
 			ComPtr<IWICBitmap> pWicBitmap;
 			hr = m_pIWICFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap);
 
-			auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+			auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
 
 			// Finally, get ID2D1Bitmap for this frame
 			ComPtr<ID2D1Bitmap> pBitmap;
 
-			hr = m_d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap);
+			hr = d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap);
 			DX::ThrowIfFailed(hr);
 
 			// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
@@ -637,11 +621,6 @@ void GifImageSource::LoadImage(IStream *pStream)
 	});
 
 	PropVariantClear(&var);
-	#if DEBUG
-	high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	auto duration = duration_cast<milliseconds>(t2 - t1).count();
-	OutputDebugString(("Duration for LoadImage: " + duration + "ms\r\n")->Data());
-	#endif
 }
 
 HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
@@ -781,17 +760,17 @@ bool GifImageSource::BeginDraw()
 	HRESULT beginDrawHR = sisNative->BeginDraw(updateRect, &surface, &offset);
 	if (SUCCEEDED(beginDrawHR))
 	{
-		auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+		auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
 
 		// Create render target. 
 		DX::ThrowIfFailed(
-			m_d2dContext->CreateBitmapFromDxgiSurface(surface.Get(), nullptr, &m_surfaceBitmap));
+			d2dContext->CreateBitmapFromDxgiSurface(surface.Get(), nullptr, &m_surfaceBitmap));
 
 		// Set context's render target. 
-		m_d2dContext->SetTarget(m_surfaceBitmap.Get());
+		d2dContext->SetTarget(m_surfaceBitmap.Get());
 
 		// Begin drawing using D2D context. 
-		m_d2dContext->BeginDraw();
+		d2dContext->BeginDraw();
 
 		// Apply a clip and transform to constrain updates to the target update area. 
 		// This is required to ensure coordinates within the target surface remain 
@@ -799,7 +778,7 @@ bool GifImageSource::BeginDraw()
 		// can also improve performance by optimizing the area that is drawn by D2D. 
 		// Apps should always account for the offset output parameter returned by  
 		// BeginDraw, since it may not match the passed updateRect input parameter's location. 
-		m_d2dContext->PushAxisAlignedClip(
+		d2dContext->PushAxisAlignedClip(
 			D2D1::RectF(
 				static_cast<float>(offset.x),
 				static_cast<float>(offset.y),
@@ -808,7 +787,7 @@ bool GifImageSource::BeginDraw()
 				),
 			D2D1_ANTIALIAS_MODE_ALIASED);
 
-		m_d2dContext->SetTransform(
+		d2dContext->SetTransform(
 			D2D1::Matrix3x2F::Translation(static_cast<float>(offset.x), static_cast<float>(offset.y)));
 	}
 	else if (beginDrawHR == DXGI_ERROR_DEVICE_REMOVED || beginDrawHR == DXGI_ERROR_DEVICE_RESET)
@@ -828,16 +807,16 @@ bool GifImageSource::BeginDraw()
 
 void GifImageSource::EndDraw()
 {
-	auto m_d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+	auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
 	// Remove the transform and clip applied in BeginDraw since 
 	// the target area can change on every update. 
-	m_d2dContext->SetTransform(D2D1::IdentityMatrix());
-	m_d2dContext->PopAxisAlignedClip();
+	d2dContext->SetTransform(D2D1::IdentityMatrix());
+	d2dContext->PopAxisAlignedClip();
 
 	// Remove the render target and end drawing. 
-	DX::ThrowIfFailed(m_d2dContext->EndDraw());
+	DX::ThrowIfFailed(d2dContext->EndDraw());
 
-	m_d2dContext->SetTarget(nullptr);
+	d2dContext->SetTarget(nullptr);
 
 	m_surfaceBitmap = nullptr;
 
@@ -913,9 +892,9 @@ void GifImageSource::Start()
 	}
 	cancellationTokenSource = cancellation_token_source();
 	auto token = cancellationTokenSource.get_token();
-	auto m_onTickTask = create_task(OnTick(), token);
+	auto onTickTask = create_task(OnTick(), token);
 	m_isRunningRenderTask = true;
-	m_onTickTask.then([&](task<void> t)
+	onTickTask.then([&](task<void> t)
 	{
 		m_isRunningRenderTask = false;
 		bool success = false;
