@@ -20,7 +20,7 @@ xmlns:gif="using:GifImage"
 
 Uri:
 ```csharp
-GifImage.AnimationBehavior.SetImageUriSource(MyImageControl, uri);
+GifImage.AnimationBehavior.SetImageUriSource(MyImageControl, new Uri("ms-appx:///Assets/MyGif.gif"));
 ```
 stream:
 ```csharp
