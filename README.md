@@ -79,7 +79,7 @@ The library is written as a Windows Runtime Component in C++, and will work on a
 
 ###Memory and CPU usage
 
-A GIFs is not necessarily a series of independent frames, but a series of images drawn upon each other in series, each adding to the complete picture. 
+A GIF is not necessarily a series of independent frames drawn one after another, but a series of images drawn upon each other, each one adding to the complete picture. 
 A common strategy to make this work is to read all frames into memory, and then draw all frames that need to be rendered in series for each frame. 
 For small GIFs this is a cpu efficient way to do it, but a problem occurs when you load a large GIF. Depending on color depth and resolution, a 10MB GIF can use 100MB of device memory or more.
 Loading large GIFs could easily exceed the apps memory limit and crash the app.
