@@ -27,7 +27,7 @@ stream:
 var storageFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/MyGif.gif"));
 GifImage.AnimationBehavior.SetImageStreamSource(MyImageControl, await storageFile.OpenReadAsync());
 ```
-**Duration controls**
+**Duration controls:**
 
 The play time or play count can be controlled via the RepeatBehavior property:
 ```xml
@@ -45,7 +45,7 @@ GifImage.AnimationBehavior.SetRepeatBehavior(MyImageControl, new RepeatBehavior(
 ```
 If the repeatbehavior is not set, the GIFs own repeat count will be used when available.
 
-**Playback controls**
+**Playback controls:**
 
 By default, GIFs autoplay when loaded. To disable autoplay, use the AutoStart property of AnimationBehavior:
 ```xml
