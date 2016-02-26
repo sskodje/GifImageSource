@@ -88,7 +88,7 @@ The CPU usage can also steadily climb the longer the GIF plays, since it has to 
 
 **But what is the alternative?**
 
-The alternative is to read frames from the stream in real time, drawing on top of the previous frame each time. This solution uses more cpu due to the constant need to read data from the stream, but uses no more memory then the current frame, and the CPU usage is always more or less constant.
+The alternative is to read frames from the stream in real time, drawing on top of the previous frame each time. This solution uses more cpu on smaller gifs due to the constant need to read data from the stream even after the first playback, but uses no more memory then the current and previous frame, and the CPU usage is always more or less constant.
 A problem with this solution is that it is susceptible to slowdowns or stuttering if the system can't read the frames fast enough.
 
 This library uses a tweaked combination of the above methods. It caches frames up to a limit of 50 frames, and then starts a task that buffers 5 frames ahead of the current frame. This makes it as efficient as possible on small GIFs, while also supporting smooth playback of very large GIFs.
