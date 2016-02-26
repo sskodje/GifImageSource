@@ -63,7 +63,7 @@ GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
   source.Pause();
 ```
-to stop the animation: 
+to stop the animation and return to the first frame: 
 ```csharp
 GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
