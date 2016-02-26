@@ -46,7 +46,10 @@ GifImage.AnimationBehavior.SetRepeatBehavior(MyImageControl, new RepeatBehavior(
 If the repeatbehavior is not set, the GIFs own repeat count will be used when available.
 
 **Playback controls**
-
+By default, GIFs autoplay when loaded. To disable autoplay, use the AutoStart property of AnimationBehavior:
+```xml
+<Image gif:AnimationBehavior.AutoStart="False" />
+```
 to start the animation:
 ```csharp
 GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
