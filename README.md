@@ -51,19 +51,19 @@ By default, GIFs autoplay when loaded. To disable autoplay, use the AutoStart pr
 ```xml
 <Image gif:AnimationBehavior.AutoStart="False" />
 ```
-to start the animation:
+To start the animation:
 ```csharp
 GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
   source.Start();
 ```
-to pause the animation: 
+To pause the animation: 
 ```csharp
 GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
   source.Pause();
 ```
-to stop the animation and return to the first frame: 
+To stop the animation and return to the first frame: 
 ```csharp
 GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
