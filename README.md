@@ -62,8 +62,8 @@ if (source != null)
 How it works:
 --------
 Having a need for a GIF rendering library for a project, i tried out existing open source libraries out there. Each had strengths and weaknesses. 
-Some had good cpu performance but used too much memory, which lead to crashes on mobile. Some did not follow all GIF specifications and rendered GIFs wrong, and some yet again used too much CPU which lead to choppy gifs on mobile hardware.
-I deciced to create this project to combine the strenghts into one efficient library, capable of rendering everything from the smallest 5kb emoticon, to an enormous 100mb high resolution GIF.
+Some had good cpu performance but used too much memory, which lead to crashes on mobile. Some did not follow all GIF specifications and rendered GIFs wrong, and some used too much CPU which lead to choppy gifs on mobile hardware.
+I deciced to create this project to combine the strenghts into one efficient library, capable of efficiently rendering everything from the smallest 5kb emoticon, to an enormous 100mb high resolution GIF.
 
 The library is written as a Windows Runtime Component in C++, and will work on all Windows Runtime projects.
 
