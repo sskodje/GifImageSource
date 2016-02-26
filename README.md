@@ -93,7 +93,7 @@ A problem with this solution is that it is susceptible to slowdowns or stutterin
 
 This library uses a tweaked combination of the above methods. It caches frames up to a limit of 50 frames, and then starts a task that buffers 5 frames ahead of the current frame. This makes it as efficient as possible on small GIFs, while also supporting smooth playback of very large GIFs.
 
-In case of a phone app, each GIF will periodically check app memory usage and stop caching frames when the memory usage exceeds a limit of 60% of app allowance, and clear all cached frames when it exceeds 80%. The library is tested to be able to smoothly render a 70MB GIF on the hardware of a Lumia 640 phone, and should work on all Windows Phone models.
+In case of a phone app, each GIF will continually check app memory usage and stop caching frames when the memory usage exceeds a limit of 60% of app allowance, and clear all cached frames when it exceeds 80%. The library is tested to be able to smoothly render a 70MB GIF on the hardware of a Lumia 640 phone, and should work on all Windows Phone models.
 
 **Gif specification:**
 
