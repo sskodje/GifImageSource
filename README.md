@@ -91,8 +91,7 @@ The CPU usage can also steadily climb the longer the GIF plays, since it has to 
 The alternative is to read frames from the stream in real time, drawing on top of the previous frame each time. This solution uses more cpu due to the constant need to read data from the stream, but uses no more memory then the current frame, and the CPU usage is always more or less constant.
 A problem with this solution is that it is susceptible to slowdowns or stuttering if the system can't read the frames fast enough.
 
-This library uses a tweaked combination of the above methods. It caches frames up to a limit of 50 frames, and then starts a task that reads 5 frames ahead of the current frames as a buffer. This makes it as efficient as possible on small GIFs, while seamlessly supporiting very large images.
-When rendering in realtime, on every frame the new frame is rendered on top of the previous frame if needed, and the product is stored as a bitmap to be used as a base for the next frame.
+This library uses a tweaked combination of the above methods. It caches frames up to a limit of 50 frames, and then starts a task that buffers 5 frames ahead of the current frame. This makes it as efficient as possible on small GIFs, while also supporting smooth playback of very large GIFs.
 
 In case of a phone app, each GIF will periodically check app memory usage and stop caching frames when the memory usage exceeds a limit of 60% of app allowance, and clear all cached frames when it exceeds 80%. The library is tested to be able to smoothly render a 70MB GIF on the hardware of a Lumia 640 phone, and should work on all Windows Phone models.
 
