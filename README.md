@@ -22,7 +22,7 @@ Uri:
 ```csharp
 GifImage.AnimationBehavior.SetImageUriSource(MyImageControl, new Uri("ms-appx:///Assets/MyGif.gif"));
 ```
-stream:
+Stream:
 ```csharp
 var storageFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/MyGif.gif"));
 GifImage.AnimationBehavior.SetImageStreamSource(MyImageControl, await storageFile.OpenReadAsync());
