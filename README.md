@@ -1,5 +1,5 @@
 # GifImageSource
-GifImageSource is a Windows Runtime Component for Windows Runtime, and Universal Windows Projects, made for rendering GIF images in a resource efficient way using Direct2D.
+GifImageSource is a Windows Runtime Component for Windows Runtime and Universal Windows Projects, made for rendering GIF images in a resource efficient way using Direct2D.
 
 Available on [NuGet](https://www.nuget.org/packages/GifImageSource/).
 
