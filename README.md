@@ -84,7 +84,7 @@ A common strategy to make this work is to read all frames into memory, and then 
 For small GIFs this is a cpu efficient way to do it, but a problem occurs when you load a large GIF. Depending on color depth and resolution, a 10MB GIF can use 100MB of device memory or more.
 Loading large GIFs could easily exceed the apps memory limit and crash the app.
 
-The CPU usage can also steadily climb the longer the GIF plays, since it has to draw more and more bitmaps for each frame. A GIF can have hundreds of frames, so after 200 frames you could end up drawing 200 bitmaps every 20 to 40 milliseconds!
+The CPU usage can also steadily climb the longer the GIF plays, since it has to draw more and more bitmaps for each frame. A GIF can have hundreds of frames, so after 200 frames you could end up drawing 200 bitmaps every 20 milliseconds!
 
 **But what is the alternative?**
 
