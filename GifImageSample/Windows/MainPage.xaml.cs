@@ -21,10 +21,12 @@ namespace GifImageSample
 
             items.AddRange(Enumerable.Range(1, 23).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
             items.Add(new MyModel(new Uri("http://i.imgur.com/9Bo0CZi.gif")));
+            items.Add(new MyModel(new Uri("http://i.imgur.com/qeu10ds.gif")));
             items.Add(new MyModel(new Uri("https://media.giphy.com/media/xT77XR3gI2c7NiDzEY/giphy.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_bgnd.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/dl_world_anim.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_opt/bunny_bgnd_lzw_gifsicle.gif")));
+            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_opt/speed_map.gif")));
             items.Add(new MyModel(new Uri("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg/800px-Tour_Eiffel_Wikimedia_Commons.jpg")));
             items.Add(new MyModel(new Uri("http://i.imgur.com/YHoBqLR.gif")));
 
@@ -64,9 +66,14 @@ namespace GifImageSample
         {
             GifImageSource source = AnimationBehavior.GetGifImageSource(_gifImage);
             if (source != null)
+                source.Pause();
+        }
+        private void Stop_Click(object sender, RoutedEventArgs e)
+        {
+            GifImageSource source = AnimationBehavior.GetGifImageSource(_gifImage);
+            if (source != null)
                 source.Stop();
         }
-
         private void BnGridViewTest_Click(object sender, RoutedEventArgs e)
         {
             this.Frame.Navigate(typeof(GridViewTest), 48);
@@ -77,9 +84,16 @@ namespace GifImageSample
             this.Frame.Navigate(typeof(ListViewTest));
         }
 
-        private void OpenGif(Uri uri)
+        private async void OpenGif(Uri uri)
         {
-            AnimationBehavior.SetImageUriSource(_gifImage, uri);
+            //To show how you can use streams
+            if (uri.Scheme == "ms-appx")
+            {
+                var storageFile = await StorageFile.GetFileFromApplicationUriAsync(uri);
+                AnimationBehavior.SetImageStreamSource(_gifImage, await storageFile.OpenReadAsync());
+            }
+            else
+                AnimationBehavior.SetImageUriSource(_gifImage, uri);
         }
 
         private void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -94,5 +108,7 @@ namespace GifImageSample
         {
             AnimationBehavior.OnError -= AnimationBehavior_OnError;
         }
+
+
     }
 }

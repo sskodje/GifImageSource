@@ -39,6 +39,7 @@
                           Icon="Pause"
                           Label="Pause"
                           Click="AppBarButtonPause_Click" />
+
         </CommandBar>
     </Page.BottomAppBar>
     <Grid>
@@ -54,12 +55,11 @@
         <Viewbox Grid.Row="1"
                  StretchDirection="DownOnly">
             <Image x:Name="_gifImage"
-                   gs:AnimationBehavior.ImageUriSource="http://i.imgur.com/9Bo0CZi.gif"
                    Stretch="Uniform" />
         </Viewbox>
         <ProgressRing x:Name="BusyIndicator"
-                                     Grid.Row="1"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Center" />
+                      Grid.Row="1"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center" />
     </Grid>
 </Page>

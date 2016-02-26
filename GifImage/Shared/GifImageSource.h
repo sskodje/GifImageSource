@@ -56,7 +56,12 @@ namespace GifImage
 		void Start();
 
 		/// <summary>
-		/// Stops the animation.
+		/// Pause the animation.
+		/// </summary>
+		void Pause();
+
+		/// <summary>
+		/// Stops the animation and return to first frame.
 		/// </summary>
 		void Stop();
 
@@ -85,6 +90,8 @@ namespace GifImage
 #define MAX_MEMORY_KILOBYTES_PER_GIF	10240	/* We allocated a max of 10 megabytes of pixel memory per gif, if it is over, the entire GIF have to be decoded in realtime. */
 #define MAX_CACHED_FRAMES_PER_GIF	50 /* Caching frames usually uses less cpu power than realtime rendering, but it slows down when caching too many frames, so we limit it */
 #define FRAMECOUNT_TO_PRERENDER	5
+#define MEMORY_PERCENT_TO_STOP_FRAME_CACHE	60
+#define MEMORY_PERCENT_TO_DELETE_FRAME_CACHE	80
 
 		ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
 		ComPtr<IWICImagingFactory> m_pIWICFactory;

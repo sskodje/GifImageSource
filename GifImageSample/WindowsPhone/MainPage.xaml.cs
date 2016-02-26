@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -26,6 +27,7 @@ namespace GifImageSample
 
             items.AddRange(Enumerable.Range(1, 23).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
             items.Add(new MyModel(new Uri("http://i.imgur.com/9Bo0CZi.gif")));
+            items.Add(new MyModel(new Uri("http://i.imgur.com/qeu10ds.gif")));
             items.Add(new MyModel(new Uri("https://media.giphy.com/media/xT77XR3gI2c7NiDzEY/giphy.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_bgnd.gif")));
             items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/dl_world_anim.gif")));
@@ -62,7 +64,7 @@ namespace GifImageSample
         }
         private void AppBarButtonLoad_Click(object sender, RoutedEventArgs e)
         {
-             OpenGif(((MyModel)this.cbGifs.SelectedItem).Uri);
+            OpenGif(((MyModel)this.cbGifs.SelectedItem).Uri);
         }
 
         private void AppBarButtonUnload_Click(object sender, RoutedEventArgs e)
@@ -81,7 +83,7 @@ namespace GifImageSample
         {
             GifImageSource source = AnimationBehavior.GetGifImageSource(_gifImage);
             if (source != null)
-                source.Stop();
+                source.Pause();
         }
 
         private void AppBarButtonOpenListViewTest_Click(object sender, RoutedEventArgs e)
@@ -104,7 +106,7 @@ namespace GifImageSample
         {
             if (e.AddedItems != null)
             {
-                 OpenGif(((MyModel)e.AddedItems[0]).Uri);
+                OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
         }
 

@@ -5,6 +5,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d"
+      xmlns:gs="using:GifImage"
       Unloaded="Page_Unloaded">
 
     <Grid Background="DimGray">
@@ -43,6 +44,10 @@
                            Label="pause"
                            Icon="Pause"
                            Click="Pause_Click" />
+            <AppBarButton  x:Name="AppBarButtonStop"
+                           Label="stop"
+                           Icon="Stop"
+                           Click="Stop_Click" />
             <Button  x:Name="BnGridViewTest"
                      Content="GridView test"
                      Click="BnGridViewTest_Click" />

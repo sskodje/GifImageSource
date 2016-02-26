@@ -890,7 +890,7 @@ void GifImageSource::StopDurationTimer()
 long GifImageSource::SetNextInterval()
 {
 	auto delay = m_delays.at(m_dwCurrentFrame);
-	if (delay < 3)
+	if (delay < 2)
 	{
 		delay = 10; // default to 100ms if delay is too short
 	}
@@ -952,11 +952,16 @@ void GifImageSource::StopAndClear()
 	cancellationTokenSource.cancel();
 }
 
-void GifImageSource::Stop()
+void GifImageSource::Pause()
 {
 	cancellationTokenSource.cancel();
 }
-
+void GifImageSource::Stop()
+{
+	cancellationTokenSource.cancel();
+	m_dwCurrentFrame = 0;
+	RenderFrame();
+}
 IAsyncAction^ GifImageSource::OnTick()
 {
 	return create_async([&]()->void
@@ -1053,7 +1058,7 @@ void GifImageSource::CheckMemoryLimits()
 	double  percentUsed = (mbMemoryUsed / mbMemoryLimit) * 100;
 	if (m_canCacheMoreFrames == true)
 	{
-		if (percentUsed > 80)
+		if (percentUsed > MEMORY_PERCENT_TO_DELETE_FRAME_CACHE)
 		{
 			m_canCacheMoreFrames = false;
 			for (int i = 0; i < m_dwFrameCount; i++)
@@ -1062,7 +1067,7 @@ void GifImageSource::CheckMemoryLimits()
 			}
 			OutputDebugString(("Stopping bitmap caching and clearing all cached bitmaps, memory usage is " + percentUsed + "%\r\n")->Data());
 		}
-		else if (percentUsed > 50)
+		else if (percentUsed > MEMORY_PERCENT_TO_STOP_FRAME_CACHE)
 		{
 			m_canCacheMoreFrames = false;
 			OutputDebugString(("Stopping bitmap caching, memory usage is " + percentUsed + "%\r\n")->Data());
@@ -1070,7 +1075,7 @@ void GifImageSource::CheckMemoryLimits()
 	}
 	else
 	{
-		if (percentUsed < 50 && m_canCacheMoreFrames == false)
+		if (percentUsed < MEMORY_PERCENT_TO_STOP_FRAME_CACHE && m_canCacheMoreFrames == false)
 		{
 			m_canCacheMoreFrames = true;
 			OutputDebugString(("Resuming bitmap caching, memory usage is " + percentUsed + "%\r\n")->Data());
