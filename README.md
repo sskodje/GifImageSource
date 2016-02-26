@@ -61,6 +61,12 @@ to pause the animation:
 ```csharp
 GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
+  source.Pause();
+```
+to stop the animation: 
+```csharp
+GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
+if (source != null)
   source.Stop();
 ```
 How it works:
