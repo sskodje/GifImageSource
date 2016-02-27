@@ -1,5 +1,4 @@
 #include "pch.h"
-
 #include "Direct2DManager.h"
 #include <wincodec.h>
 using namespace D2D1;
@@ -8,11 +7,11 @@ using namespace Microsoft::WRL;
 using namespace Windows::Foundation::Collections;
 using namespace Platform::Collections;
 
-Direct2DManager* Direct2DManager::m_instance;
-UINT Direct2DManager::s_clientCount = 0;
-Direct2DManager::Direct2DManager(void)
+std::vector<Direct2DManager*> Direct2DManager::m_instances;
+Direct2DManager::Direct2DManager(UINT windowID)
 {
 	CreateDeviceResources();
+	m_windowID = windowID;
 }
 Direct2DManager::~Direct2DManager()
 {
@@ -69,7 +68,7 @@ void Direct2DManager::CreateDeviceResources()
 			nullptr
 			)
 		);
-	
+
 
 	// Get the Direct3D 11.1 API device. 
 	DX::ThrowIfFailed(
@@ -95,30 +94,55 @@ void Direct2DManager::Recreate()
 	CreateDeviceResources();
 }
 
-Direct2DManager* Direct2DManager::GetInstance()
+Direct2DManager* Direct2DManager::GetInstance(int id)
 {
-	if (m_instance == NULL)
+		Direct2DManager* instance = nullptr;
+		for (int i = 0; i < m_instances.size(); i++)
+		{
+			if (m_instances.at(i)->m_windowID == id)
+			{
+				instance = m_instances.at(i);
+				return instance;
+			}
+		}
+		if (instance == nullptr)
+		{
+			auto instance = new Direct2DManager(id);
+			m_instances.push_back(instance);
+			return instance;
+		}
+		return nullptr;
+
+}
+void Direct2DManager::ReserveInstance(int id)
+{
+	for (int i = 0; i < m_instances.size(); i++)
 	{
-		m_instance = new Direct2DManager();
+		auto instance = m_instances.at(i);
+		if (instance != nullptr && instance->m_windowID==id)
+		{
+			instance->m_clientCount++;
+		}
 	}
-	return m_instance;
 }
-void Direct2DManager::ReserveInstance()
+void Direct2DManager::ReturnInstance(int id)
 {
-	s_clientCount++;
-	
-}
-void Direct2DManager::ReturnInstance()
-{
-	if (s_clientCount > 0)
-		s_clientCount--;
-
-	if(s_clientCount==0)
+	for (int i = 0; i < m_instances.size(); i++)
 	{
+		auto instance = m_instances.at(i);
+		if (instance != nullptr && instance->m_windowID == id)
+		{
+			if (instance->m_clientCount > 0)
+				instance->m_clientCount--;
 
-		m_instance->ClearDeviceResource();
+			if (instance->m_clientCount == 0)
+			{
 
-		delete m_instance;
-		m_instance = nullptr;
+				instance->ClearDeviceResource();
+				m_instances[i] = nullptr;
+				m_instances.erase(m_instances.begin()+i);
+				delete instance;
+			}
+		}
 	}
 }

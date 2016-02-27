@@ -114,6 +114,7 @@ namespace GifImage
 		bool m_isCachingFrames;
 		bool m_isDestructing;
 		bool m_isRunningRenderTask;
+		int m_windowID;
 
 
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;

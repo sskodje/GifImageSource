@@ -7,10 +7,10 @@ namespace GifImage
 	{
 	private:
 		// Instance
-		static Direct2DManager*                m_instance;
+		static std::vector<Direct2DManager*>                m_instances;
 
-		static UINT s_clientCount;
-
+		UINT m_clientCount;
+		UINT m_windowID;
 		// D2D members
 		Microsoft::WRL::ComPtr<IDXGIDevice>                    m_dxgiDevice;
 		Microsoft::WRL::ComPtr<ID2D1Device>                    m_d2dDevice;
@@ -23,12 +23,12 @@ namespace GifImage
 
 	public:
 		// Private constructor
-		Direct2DManager(void);
+		Direct2DManager(UINT windowID);
 		virtual ~Direct2DManager();
 		// Instance
-		static Direct2DManager* GetInstance();
-		static void ReturnInstance();
-		static void ReserveInstance();
+		static Direct2DManager* GetInstance(int id);
+		static void ReturnInstance(int id);
+		static void ReserveInstance(int id);
 		// Properties
 
 		inline Microsoft::WRL::ComPtr<ID2D1Device> GetD2DDevice()

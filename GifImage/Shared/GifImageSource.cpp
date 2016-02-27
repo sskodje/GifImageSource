@@ -94,7 +94,7 @@ void GifImageSource::ClearResources()
 	cancellationTokenSource = cancellation_token_source();
 	if (m_haveReservedDeviceResources)
 	{
-		Direct2DManager::ReturnInstance();
+		Direct2DManager::ReturnInstance(m_windowID);
 		m_haveReservedDeviceResources = false;
 	}
 }
@@ -106,7 +106,7 @@ bool GifImageSource::RenderFrame()
 	bool bCanDraw = BeginDraw();
 	if (bCanDraw)
 	{
-		auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+		auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 		d2dContext->Clear();
 
 		if (m_bitmaps.at(m_dwCurrentFrame) != nullptr)
@@ -194,7 +194,7 @@ bool GifImageSource::RenderFrame()
 //since we need to clear the SurfaceImageSource for each draw operation.
 void GifImageSource::CopyCurrentFrameToBitmap()
 {
-	auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+	auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 
 	HRESULT hr;
 	//This is a bitmaprender we use to create the bitmaps off-screen.
@@ -390,7 +390,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 		PROPVARIANT propValue;
 		PropVariantInit(&propValue);
 
-		auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+		auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 
 
 		if (is_task_cancellation_requested())
@@ -599,7 +599,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 			ComPtr<IWICBitmap> pWicBitmap;
 			hr = m_pIWICFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap);
 
-			auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+			auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 
 			// Finally, get ID2D1Bitmap for this frame
 			ComPtr<ID2D1Bitmap> pBitmap;
@@ -719,13 +719,21 @@ HRESULT GifImageSource::ReadGifApplicationExtension(IWICMetadataQueryReader *pQu
 
 void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 {
+	auto currentWindow = Window::Current;
+	if (currentWindow == nullptr)
+	{
+		throw ref new Exception(E_FAIL,"Gif must have a window parent");
+	}
+	m_windowID = currentWindow->GetHashCode();
+
 	if (forceRecreate)
 	{
-		Direct2DManager::GetInstance()->Recreate();
+		Direct2DManager::GetInstance(m_windowID)->Recreate();
 	}
 	if (!m_haveReservedDeviceResources)
 	{
-		Direct2DManager::ReserveInstance();
+		Direct2DManager::GetInstance(m_windowID);
+		Direct2DManager::ReserveInstance(m_windowID);
 		m_haveReservedDeviceResources = true;
 	}
 
@@ -738,7 +746,7 @@ void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 
 
 
-	auto dxgiDevice = Direct2DManager::GetInstance()->GetDXGIDevice();
+	auto dxgiDevice = Direct2DManager::GetInstance(m_windowID)->GetDXGIDevice();
 
 	// Query for ISurfaceImageSourceNative interface.
 	Microsoft::WRL::ComPtr<ISurfaceImageSourceNative> sisNative;
@@ -751,9 +759,10 @@ void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 		sisNative->SetDevice(dxgiDevice.Get()));
 }
 
+
+
 bool GifImageSource::BeginDraw()
 {
-
 	RECT updateRect = { 0, 0, m_width, m_height };
 	POINT offset = { 0 };
 
@@ -766,7 +775,7 @@ bool GifImageSource::BeginDraw()
 	HRESULT beginDrawHR = sisNative->BeginDraw(updateRect, &surface, &offset);
 	if (SUCCEEDED(beginDrawHR))
 	{
-		auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+		auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 
 		// Create render target. 
 		DX::ThrowIfFailed(
@@ -813,7 +822,7 @@ bool GifImageSource::BeginDraw()
 
 void GifImageSource::EndDraw()
 {
-	auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+	auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 	// Remove the transform and clip applied in BeginDraw since 
 	// the target area can change on every update. 
 	d2dContext->SetTransform(D2D1::IdentityMatrix());

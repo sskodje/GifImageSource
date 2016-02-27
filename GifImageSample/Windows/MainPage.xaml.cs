@@ -86,13 +86,6 @@ namespace GifImageSample
 
         private async void OpenGif(Uri uri)
         {
-            //To show how you can use streams
-            if (uri.Scheme == "ms-appx")
-            {
-                var storageFile = await StorageFile.GetFileFromApplicationUriAsync(uri);
-                AnimationBehavior.SetImageStreamSource(_gifImage, await storageFile.OpenReadAsync());
-            }
-            else
                 AnimationBehavior.SetImageUriSource(_gifImage, uri);
         }
 
