@@ -100,7 +100,7 @@ void GifImageSource::ClearResources()
 	StopDurationTimer();
 	StopMemoryTimer();
 
-	m_millisSinceLastMemoryCheck = 0;
+
 	m_completedLoopCount = 0;
 	m_isAnimatedGif = false;
 	m_isRunningRenderTask = false;
@@ -223,8 +223,8 @@ void GifImageSource::CopyCurrentFrameToBitmap()
 	HRESULT hr;
 	//This is a bitmaprender we use to create the bitmaps off-screen.
 	ComPtr<ID2D1BitmapRenderTarget> renderTarget = 0;
-	d2dContext->CreateCompatibleRenderTarget(&renderTarget);
-
+	hr = d2dContext->CreateCompatibleRenderTarget(&renderTarget);
+	DX::ThrowIfFailed(hr);
 	renderTarget->BeginDraw();
 	renderTarget->Clear();
 
@@ -390,6 +390,7 @@ IAsyncAction^ GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 {
 	return create_async([this, startFrame, endFrame]() -> void
 	{
+		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 		if (startFrame > m_dwFrameCount || endFrame > m_dwFrameCount)
 			return;
 		int start = startFrame;
@@ -450,16 +451,23 @@ IAsyncAction^ GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 					pConverter,
 					nullptr,
 					&pRawFrame);
-
-
 			}
 
 			if (is_task_cancellation_requested())
 			{
 				cancel_current_task();
 			}
-
-			if (m_canCacheMoreFrames && index < MAX_CACHED_FRAMES_PER_GIF)
+#if WINDOWS_PHONE_DLL
+			auto secondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(high_resolution_clock::now().time_since_epoch()).count();
+			if (secondsSinceEpoch - m_lastMemoryCheckEpochTime > 1)
+			{
+				CheckMemoryLimits();
+				m_lastMemoryCheckEpochTime = secondsSinceEpoch;
+			}
+#endif
+			if (m_canCacheMoreFrames
+				&& index < MAX_CACHED_FRAMES_PER_GIF
+				&& (index == 0 || m_bitmaps.at(index - 1) != nullptr))
 			{
 				m_bitmaps[index] = pRawFrame;
 			}
@@ -490,6 +498,9 @@ IAsyncAction^ GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 			}
 			end = min(m_dwCurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
 		}
+		high_resolution_clock::time_point t2 = high_resolution_clock::now();
+		auto duration = duration_cast<milliseconds>(t2 - t1).count();
+		OutputDebugString(("Duration for GetRawFrameTask: " + duration + "ms\r\n")->Data());
 	});
 }
 
@@ -552,6 +563,16 @@ void GifImageSource::LoadImage(IStream *pStream)
 	m_offsets = std::vector<D2D1_POINT_2F>(m_dwFrameCount);
 	m_delays = std::vector<USHORT>(m_dwFrameCount);
 	m_disposals = std::vector<USHORT>(m_dwFrameCount);
+
+	//This number is a little bit arbitrary, but it is used to set the max size of frames to cache in raw pixel size.
+	int maxBytesToCache = 1000000;
+	//The frame size for this gif in bytes
+	double frameSizeBytes = (m_width*m_height)*(m_bitsPerPixel) / 8;
+	double frameCountToPreload = maxBytesToCache / frameSizeBytes;
+	frameCountToPreload = max(FRAMECOUNT_TO_PRERENDER, (int)frameCountToPreload);//make sure to always prerender enough frames to don't start the the prerender thread on first frame render.
+	frameCountToPreload = min(MAX_CACHED_FRAMES_PER_GIF, (int)frameCountToPreload);//make sure to not exceed MAX_CACHED_FRAMES_PER_GIF count.
+
+	OutputDebugString(("frames to preload: " + frameCountToPreload + "\r\n")->Data());
 	//	 Get and convert each frame bitmap into ID2D1Bitmap
 	for (UINT dwFrameIndex = 0; dwFrameIndex < dwFrameCount; dwFrameIndex++)
 	{
@@ -585,8 +606,8 @@ void GifImageSource::LoadImage(IStream *pStream)
 		PropVariantClear(&var);
 		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
 		fOffsetY = var.uiVal;
-		//Preload the bitmaps for the 10 first frames, to get a smooth start.
-		if (dwFrameIndex < 5)
+		//Preload the bitmaps for the first frames
+		if (dwFrameIndex < frameCountToPreload)
 		{
 			// Set up converter 
 			ComPtr<IWICFormatConverter> pConvertedBitmap;
@@ -613,12 +634,18 @@ void GifImageSource::LoadImage(IStream *pStream)
 		m_offsets[dwFrameIndex] = { fOffsetX, fOffsetY };
 		m_delays[dwFrameIndex] = dwDelay;
 		m_disposals[dwFrameIndex] = dwDisposal;
+
+		//render first frame
+		if (dwFrameIndex == 0)
+		{
+			Utilities::ui_task(Dispatcher, [&]()
+			{
+				RenderFrame();
+			});
+		}
 	}
 
-	Utilities::ui_task(Dispatcher, [&]()
-	{
-		RenderFrame();
-	});
+
 
 	PropVariantClear(&var);
 }
@@ -958,12 +985,6 @@ IAsyncAction^ GifImageSource::OnTick()
 			high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
 
-			if (m_millisSinceLastMemoryCheck > 1000)
-			{
-				CheckMemoryLimits();
-				m_millisSinceLastMemoryCheck = 0;
-			}
-
 			long span = SetNextInterval();
 
 			HRESULT hr = GetRawFrame(m_dwCurrentFrame);
@@ -1014,7 +1035,6 @@ IAsyncAction^ GifImageSource::OnTick()
 			auto duration = duration_cast<milliseconds>(t2 - t1).count();
 			//OutputDebugString(("waitedFor: " + duration + "ms\r\n")->Data());
 			long delayTime = max(0, span - duration);
-			m_millisSinceLastMemoryCheck += delayTime;
 			wait(delayTime);
 		}
 	});
@@ -1033,7 +1053,7 @@ void GifImageSource::CheckMemoryLimits()
 #if WINDOWS_PHONE_DLL
 	double mbMemoryLimit = Windows::System::MemoryManager::AppMemoryUsageLimit / 1024 / 1024;
 	double mbMemoryUsed = Windows::System::MemoryManager::AppMemoryUsage / 1024 / 1024;
-	//	OutputDebugString(("Memory usage increased to: " + mbMemoryUsed + "mb / " + mbMemoryLimit + "mb\r\n")->Data());
+	OutputDebugString(("Memory usage increased to: " + mbMemoryUsed + "mb / " + mbMemoryLimit + "mb\r\n")->Data());
 	double  percentUsed = (mbMemoryUsed / mbMemoryLimit) * 100;
 	if (m_canCacheMoreFrames == true)
 	{

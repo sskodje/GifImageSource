@@ -108,7 +108,7 @@ namespace GifImage
 		UINT m_dwPreviousFrame;
 		UINT m_bitsPerPixel;
 		UINT m_cachedKB;
-		UINT m_millisSinceLastMemoryCheck;
+		long m_lastMemoryCheckEpochTime;
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
 		bool m_isCachingFrames;
