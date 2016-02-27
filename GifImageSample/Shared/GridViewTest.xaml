@@ -22,10 +22,11 @@
         </Button>
         <GridView ItemsSource="{Binding DataContext.Items}"
                   Grid.Row="1">
+
             <GridView.ItemTemplate>
                 <DataTemplate>
-                    <Viewbox Height="80"
-                             Width="150"
+                    <Viewbox Height="60"
+                             Width="120"
                              Stretch="Uniform"
                              StretchDirection="DownOnly">
                         <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"

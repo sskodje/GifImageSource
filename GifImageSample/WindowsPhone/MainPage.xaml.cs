@@ -93,7 +93,7 @@ namespace GifImageSample
 
         private void AppBarButtonOpenGridViewTest_Click(object sender, RoutedEventArgs e)
         {
-            this.Frame.Navigate(typeof(GridViewTest), 14);
+            this.Frame.Navigate(typeof(GridViewTest), 15);
         }
 
         private void OpenGif(Uri uri)

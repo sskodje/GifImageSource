@@ -41,7 +41,6 @@ namespace GifImageSample
             HardwareButtons.BackPressed += HardwareButtons_BackPressed;
 #endif
 
-            //   this.NavigationCacheMode = NavigationCacheMode.Disabled;
         }
 
 
@@ -85,9 +84,6 @@ namespace GifImageSample
         private void Image_Unloaded(object sender, RoutedEventArgs e)
         {
             ((Image)sender).Unloaded -= Image_Unloaded;
-            // ((Image)sender).Source = null;
-            //GifImage.AnimationBehavior.SetGifImageUri(((Image)sender), null);
-            //   XamlAnimatedGif.AnimationBehavior.SetSourceUri((Image)sender, null);
         }
 
         private void bnAddItems_Click(object sender, RoutedEventArgs e)

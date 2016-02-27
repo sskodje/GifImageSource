@@ -137,12 +137,6 @@
     </SDKReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="XamlAnimatedGif, Version=1.0.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\XamlAnimatedGif.1.0.7\lib\portable-win81+wpa81\XamlAnimatedGif.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">

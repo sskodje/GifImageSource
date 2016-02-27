@@ -10,7 +10,7 @@ namespace GifImageSample
 
         public Uri Uri { get; set; }
 
-        public MyModel( Uri uri)
+        public MyModel(Uri uri)
         {
             this.Uri = uri;
         }
@@ -23,17 +23,9 @@ namespace GifImageSample
             {
                 uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", index));
             }
-            //else if (index == 24)
-            //{
-            //    // Uri = new Uri("https://i.imgur.com/ZR3QN22.gif");
-            //    // Uri = new Uri("http://i.imgur.com/zxV5dpc.jpg");
-            //    // Uri = new Uri("http://i.imgur.com/8nvvEfd.gif");
-            //    //  Uri = new Uri("http://i.imgur.com/YHoBqLR.gif");
-            //    uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", "3"));
-            //}
             else
             {
-                Random r = new Random(index);
+                Random r = new Random((int)DateTime.Now.Ticks + index);
                 int i = r.Next(1, 22);
                 uri = new Uri(String.Format("ms-appx:///Gifs/{0}.gif", i));
             }
