@@ -18,6 +18,7 @@ using namespace Windows::Foundation;
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage;
 using namespace Windows::Networking::BackgroundTransfer;
+using namespace Windows::UI::Xaml::Media::Animation;
 
 template <typename T>
 inline void SafeRelease(T *&pI)
@@ -64,41 +65,11 @@ GifImageSource::~GifImageSource()
 	OutputDebugString(L"Destructed GifImageSource\r\n");
 }
 
-void GifImageSource::StartMemoryTimer()
-{
-#if WINDOWS_PHONE_DLL
-	if (m_memoryTimer == nullptr)
-	{
-		auto memoryTimerCall = new concurrency::call<int>(
-			[this](int)
-		{
-			CheckMemoryLimits();
-		});
 
-
-		long millis = 1000;
-		m_memoryTimer = new concurrency::timer<int>(millis, 0, memoryTimerCall, true);
-		m_memoryTimer->start();
-	}
-#endif
-}
-
-void GifImageSource::StopMemoryTimer()
-{
-#if WINDOWS_PHONE_DLL
-	if (m_memoryTimer != nullptr)
-	{
-		m_memoryTimer->stop();
-		delete m_memoryTimer;
-		m_memoryTimer = nullptr;
-	}
-#endif
-}
 
 void GifImageSource::ClearResources()
 {
 	StopDurationTimer();
-	StopMemoryTimer();
 
 
 	m_completedLoopCount = 0;
@@ -119,6 +90,7 @@ void GifImageSource::ClearResources()
 	m_surfaceBitmap = nullptr;
 	m_pRawFrame = nullptr;
 	m_pPreviousRawFrame = nullptr;
+
 	cancellationTokenSource = cancellation_token_source();
 	if (m_haveReservedDeviceResources)
 	{
@@ -144,6 +116,13 @@ bool GifImageSource::RenderFrame()
 			{
 				int disposal = m_disposals[i];
 				auto bitmap = m_bitmaps.at(i).Get();
+				if (bitmap == nullptr)
+				{
+					//Something has gone wrong, this should not happen. We reset to first frame and return true for loop complete.
+					EndDraw();
+					m_dwCurrentFrame = 0;
+					return true;
+				}
 				switch (disposal)
 				{
 				case DISPOSAL_UNSPECIFIED:
@@ -205,9 +184,6 @@ bool GifImageSource::RenderFrame()
 		m_realtimeBitmapBuffer[m_dwCurrentFrame] = nullptr;
 		SelectNextFrame();
 	}
-	else
-	{
-	}
 	// Returns true if we just completed a loop
 	return m_dwCurrentFrame == 0;
 }
@@ -239,6 +215,11 @@ void GifImageSource::CopyCurrentFrameToBitmap()
 			int disposal = m_disposals[i];
 			auto offset = m_offsets.at(i);
 			auto bitmap = m_bitmaps.at(i).Get();
+			if (bitmap == nullptr)
+			{
+				//Something has gone wrong, this should not happen.
+				return;
+			}
 			auto rect = D2D1::RectF(
 				static_cast<float>(offset.x),
 				static_cast<float>(offset.y),
@@ -338,7 +319,8 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 		int framecount = m_dwFrameCount;
 		int endFrame = min(startIndex + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
 		auto token = cancellationTokenSource.get_token();
-		create_task(GetRawFramesTask(startFrame, endFrame), token).then([&](task<void> t)
+		create_task([this, startFrame, endFrame]() {GetRawFramesTask(startFrame, endFrame); }, token)
+			.then([&](task<void> t)
 		{
 			m_isCachingFrames = false;
 			bool success = false;
@@ -386,122 +368,119 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 	return E_ABORT;
 }
 
-IAsyncAction^ GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
+void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 {
-	return create_async([this, startFrame, endFrame]() -> void
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	if (startFrame > m_dwFrameCount || endFrame > m_dwFrameCount)
+		return;
+	int start = startFrame;
+	int end = endFrame;
+	for (int index = start; index < end; index++)
 	{
-		high_resolution_clock::time_point t1 = high_resolution_clock::now();
-		if (startFrame > m_dwFrameCount || endFrame > m_dwFrameCount)
-			return;
-		int start = startFrame;
-		int end = endFrame;
-		for (int index = start; index < end; index++)
+		if (is_task_cancellation_requested())
 		{
-			if (is_task_cancellation_requested())
-			{
-				cancel_current_task();
-			}
-			if (m_bitmaps.at(index) != nullptr || m_realtimeBitmapBuffer.at(index) != nullptr)
-				continue;
-			IWICFormatConverter *pConverter = nullptr;
-			IWICBitmapFrameDecode *pWicFrame = nullptr;
-			IWICMetadataQueryReader *pFrameMetadataQueryReader = nullptr;
-
-			PROPVARIANT propValue;
-			PropVariantInit(&propValue);
-
-			auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
-
-
-			if (is_task_cancellation_requested())
-			{
-				cancel_current_task();
-			}
-			// IWICBitmapDecoder is roughly analogous to BitmapDecoder
-			// Retrieve the current frame
-			HRESULT hr = m_pDecoder->GetFrame(index, &pWicFrame);
-			if (SUCCEEDED(hr))
-			{
-				// Format convert to 32bppPBGRA which D2D expects
-				hr = m_pIWICFactory->CreateFormatConverter(&pConverter);
-			}
-			if (is_task_cancellation_requested())
-			{
-				cancel_current_task();
-			}
-			if (SUCCEEDED(hr))
-			{
-				hr = pConverter->Initialize(
-					pWicFrame,
-					GUID_WICPixelFormat32bppPBGRA,
-					WICBitmapDitherTypeNone,
-					nullptr,
-					0.f,
-					WICBitmapPaletteTypeCustom);
-			}
-			if (is_task_cancellation_requested())
-			{
-				cancel_current_task();
-			}
-			ComPtr<ID2D1Bitmap> pRawFrame = nullptr;
-			if (SUCCEEDED(hr))
-			{
-				// Create a D2DBitmap from IWICBitmapSource
-				hr = d2dContext->CreateBitmapFromWicBitmap(
-					pConverter,
-					nullptr,
-					&pRawFrame);
-			}
-
-			if (is_task_cancellation_requested())
-			{
-				cancel_current_task();
-			}
-#if WINDOWS_PHONE_DLL
-			auto secondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(high_resolution_clock::now().time_since_epoch()).count();
-			if (secondsSinceEpoch - m_lastMemoryCheckEpochTime > 1)
-			{
-				CheckMemoryLimits();
-				m_lastMemoryCheckEpochTime = secondsSinceEpoch;
-			}
-#endif
-			if (m_canCacheMoreFrames
-				&& index < MAX_CACHED_FRAMES_PER_GIF
-				&& (index == 0 || m_bitmaps.at(index - 1) != nullptr))
-			{
-				m_bitmaps[index] = pRawFrame;
-			}
-			else
-			{
-				m_realtimeBitmapBuffer[index] = pRawFrame;
-			}
-			PropVariantClear(&propValue);
-
-			SafeRelease(pConverter);
-			SafeRelease(pWicFrame);
-			SafeRelease(pFrameMetadataQueryReader);
-			if (index + 1 == end)
-			{
-				int prevFrame = m_dwCurrentFrame;
-				for (int i = 0; i < 6; i++)
-				{
-					if (is_task_cancellation_requested() || m_delays.size() < m_dwCurrentFrame)
-					{
-						cancel_current_task();
-					}
-					long duration = m_delays.at(m_dwCurrentFrame) * 5;
-					wait(duration);
-					if (m_dwCurrentFrame != prevFrame)
-						break;
-
-				}
-			}
-			end = min(m_dwCurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
+			cancel_current_task();
 		}
-		high_resolution_clock::time_point t2 = high_resolution_clock::now();
-		auto duration = duration_cast<milliseconds>(t2 - t1).count();
-		OutputDebugString(("Duration for GetRawFrameTask: " + duration + "ms\r\n")->Data());
-	});
+		if (m_bitmaps.at(index) != nullptr || m_realtimeBitmapBuffer.at(index) != nullptr)
+			continue;
+		IWICFormatConverter *pConverter = nullptr;
+		IWICBitmapFrameDecode *pWicFrame = nullptr;
+		IWICMetadataQueryReader *pFrameMetadataQueryReader = nullptr;
+
+		PROPVARIANT propValue;
+		PropVariantInit(&propValue);
+
+		auto d2dContext = Direct2DManager::GetInstance()->GetD2DContext();
+
+
+		if (is_task_cancellation_requested())
+		{
+			cancel_current_task();
+		}
+		// IWICBitmapDecoder is roughly analogous to BitmapDecoder
+		// Retrieve the current frame
+		HRESULT hr = m_pDecoder->GetFrame(index, &pWicFrame);
+		if (SUCCEEDED(hr))
+		{
+			// Format convert to 32bppPBGRA which D2D expects
+			hr = m_pIWICFactory->CreateFormatConverter(&pConverter);
+		}
+		if (is_task_cancellation_requested())
+		{
+			cancel_current_task();
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pConverter->Initialize(
+				pWicFrame,
+				GUID_WICPixelFormat32bppPBGRA,
+				WICBitmapDitherTypeNone,
+				nullptr,
+				0.f,
+				WICBitmapPaletteTypeCustom);
+		}
+		if (is_task_cancellation_requested())
+		{
+			cancel_current_task();
+		}
+		ComPtr<ID2D1Bitmap> pRawFrame = nullptr;
+		if (SUCCEEDED(hr))
+		{
+			// Create a D2DBitmap from IWICBitmapSource
+			hr = d2dContext->CreateBitmapFromWicBitmap(
+				pConverter,
+				nullptr,
+				&pRawFrame);
+		}
+
+#if WINDOWS_PHONE_DLL
+		auto secondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(high_resolution_clock::now().time_since_epoch()).count();
+		if (secondsSinceEpoch - m_lastMemoryCheckEpochTime > 1)
+		{
+			CheckMemoryLimits();
+			m_lastMemoryCheckEpochTime = secondsSinceEpoch;
+		}
+#endif
+		if (is_task_cancellation_requested())
+		{
+			cancel_current_task();
+		}
+		if (m_canCacheMoreFrames
+			&& index < MAX_CACHED_FRAMES_PER_GIF
+			&& (index == 0 || m_bitmaps.at(index - 1) != nullptr))
+		{
+			m_bitmaps[index] = pRawFrame;
+		}
+		else
+		{
+			m_realtimeBitmapBuffer[index] = pRawFrame;
+		}
+		PropVariantClear(&propValue);
+
+		SafeRelease(pConverter);
+		SafeRelease(pWicFrame);
+		SafeRelease(pFrameMetadataQueryReader);
+		if (index + 1 == end)
+		{
+			int prevFrame = m_dwCurrentFrame;
+			for (int i = 0; i < 6; i++)
+			{
+				if (is_task_cancellation_requested() || m_delays.size() < m_dwCurrentFrame)
+				{
+					cancel_current_task();
+				}
+				long duration = m_delays.at(m_dwCurrentFrame) * 5;
+				wait(duration);
+				if (m_dwCurrentFrame != prevFrame)
+					break;
+
+			}
+		}
+		end = min(m_dwCurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
+	}
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	auto duration = duration_cast<milliseconds>(t2 - t1).count();
+	OutputDebugString(("Duration for GetRawFrameTask: " + duration + "ms\r\n")->Data());
 }
 
 
@@ -919,9 +898,10 @@ void GifImageSource::Start()
 	}
 	cancellationTokenSource = cancellation_token_source();
 	auto token = cancellationTokenSource.get_token();
-	auto onTickTask = create_task(OnTick(), token);
+
 	m_isRunningRenderTask = true;
-	onTickTask.then([&](task<void> t)
+	create_task([this]() { OnTick(); }, token)
+		.then([&](task<void> t)
 	{
 		m_isRunningRenderTask = false;
 		bool success = false;
@@ -968,76 +948,76 @@ void GifImageSource::Stop()
 	m_dwCurrentFrame = 0;
 	RenderFrame();
 }
-IAsyncAction^ GifImageSource::OnTick()
+void GifImageSource::OnTick()
 {
-	return create_async([&]()->void
+	IAsyncAction^ renderFrameAction;
+	while (true)
 	{
-		IAsyncAction^ renderFrameAction;
-		while (true)
+		if (is_task_cancellation_requested())
 		{
-			if (is_task_cancellation_requested())
+			WaitForAsync(renderFrameAction);
+			cancel_current_task();
+		}
+
+		bool doBreak = false;
+		high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+
+		long span = SetNextInterval();
+
+		HRESULT hr = GetRawFrame(m_dwCurrentFrame);
+
+		if (hr == E_ABORT)
+		{
+			OutputDebugString(("Bitmap not decoded, delaying frame " + m_dwCurrentFrame + "\r\n")->Data());
+		}
+		else
+		{
+
+			t1 = high_resolution_clock::now();
+			if (Dispatcher == nullptr)
 			{
-				WaitForAsync(renderFrameAction);
-				cancel_current_task();
+				return;
 			}
-
-			bool doBreak = false;
-			high_resolution_clock::time_point t1 = high_resolution_clock::now();
-
-
-			long span = SetNextInterval();
-
-			HRESULT hr = GetRawFrame(m_dwCurrentFrame);
-
-			if (hr == E_ABORT)
+			renderFrameAction = Dispatcher->RunAsync(CoreDispatcherPriority::Normal, ref new Windows::UI::Core::DispatchedHandler([&]()
 			{
-				OutputDebugString(("Bitmap not decoded, delaying frame " + m_dwCurrentFrame + "\r\n")->Data());
-			}
-			else
-			{
-				t1 = high_resolution_clock::now();
-				renderFrameAction = Dispatcher->RunAsync(CoreDispatcherPriority::Normal, ref new Windows::UI::Core::DispatchedHandler([&]()
+				auto completedLoop = RenderFrame();
+				if (completedLoop)
 				{
+					m_completedLoopCount++;
+					m_pPreviousRawFrame = nullptr;
 
-					auto completedLoop = RenderFrame();
-					if (completedLoop)
+					if (m_repeatBehavior != nullptr)
 					{
-						m_completedLoopCount++;
-						m_pPreviousRawFrame = nullptr;
-
-						if (m_repeatBehavior != nullptr)
+						// Stop animation if this is not a perpetually looping gif
+						if (m_repeatBehavior->Value.Type == RepeatBehaviorType::Count && m_repeatBehavior->Value.Count > 0 && m_repeatBehavior->Value.Count == m_completedLoopCount)
 						{
-							// Stop animation if this is not a perpetually looping gif
-							if (m_repeatBehavior->Value.Type == RepeatBehaviorType::Count && m_repeatBehavior->Value.Count > 0 && m_repeatBehavior->Value.Count == m_completedLoopCount)
-							{
 
-								Stop();
-								for (int i = 0; i < m_dwFrameCount; i++)
-								{
-									m_bitmaps.at(i) = nullptr;
-								}
-								m_pRawFrame = nullptr;
-								doBreak = true;
+							Stop();
+							for (int i = 0; i < m_dwFrameCount; i++)
+							{
+								m_bitmaps.at(i) = nullptr;
 							}
+							m_pRawFrame = nullptr;
+							doBreak = true;
 						}
 					}
+				}
+			}));
+			WaitForAsync(renderFrameAction);
 
-				}));
-				WaitForAsync(renderFrameAction);
-
-			}
-
-			if (!m_isAnimatedGif)
-				doBreak = true;
-			if (doBreak)
-				break;
-			high_resolution_clock::time_point t2 = high_resolution_clock::now();
-			auto duration = duration_cast<milliseconds>(t2 - t1).count();
-			//OutputDebugString(("waitedFor: " + duration + "ms\r\n")->Data());
-			long delayTime = max(0, span - duration);
-			wait(delayTime);
 		}
-	});
+
+		if (!m_isAnimatedGif)
+			doBreak = true;
+		if (doBreak)
+			break;
+		high_resolution_clock::time_point t2 = high_resolution_clock::now();
+		auto duration = duration_cast<milliseconds>(t2 - t1).count();
+		//OutputDebugString(("waitedFor: " + duration + "ms\r\n")->Data());
+		long delayTime = max(0, span - duration);
+		wait(delayTime);
+	}
 }
 
 void GifImageSource::WaitForAsync(IAsyncAction ^action)
@@ -1060,7 +1040,7 @@ void GifImageSource::CheckMemoryLimits()
 		if (percentUsed > MEMORY_PERCENT_TO_DELETE_FRAME_CACHE)
 		{
 			m_canCacheMoreFrames = false;
-			for (int i = 0; i < m_dwFrameCount; i++)
+			for (int i = m_dwCurrentFrame; i < m_dwFrameCount; i++)
 			{
 				m_bitmaps.at(i) = nullptr;
 			}

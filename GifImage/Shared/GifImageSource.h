@@ -4,10 +4,10 @@
 #include "Direct2DManager.h"
 #include <agents.h>
 
-using namespace Windows::UI::Xaml::Media::Animation;
-using namespace concurrency;
-using namespace Windows::Foundation;
-using namespace Platform;
+//using namespace Windows::UI::Xaml::Media::Animation;
+//using namespace concurrency;
+//using namespace Windows::Foundation;
+//using namespace Platform;
 
 namespace GifImage
 {
@@ -90,14 +90,14 @@ namespace GifImage
 #define MAX_MEMORY_KILOBYTES_PER_GIF	10240	/* We allocated a max of 10 megabytes of pixel memory per gif, if it is over, the entire GIF have to be decoded in realtime. */
 #define MAX_CACHED_FRAMES_PER_GIF	50 /* Caching frames usually uses less cpu power than realtime rendering, but it slows down when caching too many frames, so we limit it */
 #define FRAMECOUNT_TO_PRERENDER	5	/* The number of frames to cache ahead */
-#define MEMORY_PERCENT_TO_STOP_FRAME_CACHE	60	/* The percent of total allowed app memory used before we stop caching frames */
-#define MEMORY_PERCENT_TO_DELETE_FRAME_CACHE	80	/* The percent of total allowed app memory used before we delete all cached frames */
+#define MEMORY_PERCENT_TO_STOP_FRAME_CACHE	50	/* The percent of total allowed app memory used before we stop caching frames */
+#define MEMORY_PERCENT_TO_DELETE_FRAME_CACHE	70	/* The percent of total allowed app memory used before we delete all cached frames */
 
-		ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
-		ComPtr<IWICImagingFactory> m_pIWICFactory;
-		ComPtr<ID2D1Bitmap>            m_pRawFrame;
-		ComPtr<ID2D1Bitmap>            m_pPreviousRawFrame;
-		ComPtr<IWICBitmapDecoder> m_pDecoder;
+		Microsoft::WRL::ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
+		Microsoft::WRL::ComPtr<IWICImagingFactory> m_pIWICFactory;
+		Microsoft::WRL::ComPtr<ID2D1Bitmap>            m_pRawFrame;
+		Microsoft::WRL::ComPtr<ID2D1Bitmap>            m_pPreviousRawFrame;
+		Microsoft::WRL::ComPtr<IWICBitmapDecoder> m_pDecoder;
 
 		UINT m_width;
 		UINT m_height;
@@ -118,8 +118,8 @@ namespace GifImage
 
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
-		std::vector<ComPtr<ID2D1Bitmap>> m_bitmaps;
-		std::vector<ComPtr<ID2D1Bitmap>> m_realtimeBitmapBuffer;
+		std::vector<Microsoft::WRL::ComPtr<ID2D1Bitmap>> m_bitmaps;
+		std::vector<Microsoft::WRL::ComPtr<ID2D1Bitmap>> m_realtimeBitmapBuffer;
 		std::vector<D2D1_POINT_2F> m_offsets;
 		std::vector<USHORT> m_delays;
 		std::vector<USHORT> m_disposals;
@@ -134,21 +134,19 @@ namespace GifImage
 		void CreateDeviceResources(boolean forceRecreate);
 		bool BeginDraw();
 		void EndDraw();
-		void WaitForAsync(IAsyncAction ^A);
+		void WaitForAsync(Windows::Foundation::IAsyncAction ^A);
 		void CheckMemoryLimits();
 		void StartDurationTimer();
 		void StopDurationTimer();
-		void StartMemoryTimer();
-		void StopMemoryTimer();
 		long SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
 		void CopyCurrentFrameToBitmap();
 
-		cancellation_token_source cancellationTokenSource;
-		IAsyncAction^ GetRawFramesTask(int startFrame, int endFrame);
+		concurrency::cancellation_token_source cancellationTokenSource;
+		void GetRawFramesTask(int startFrame, int endFrame);
 
-		IAsyncAction^ OnTick();
+		void OnTick();
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
 		HRESULT GetRawFrame(int uFrameIndex);
