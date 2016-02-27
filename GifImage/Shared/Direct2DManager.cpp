@@ -4,6 +4,9 @@
 #include <wincodec.h>
 using namespace D2D1;
 using namespace GifImage;
+using namespace Microsoft::WRL;
+using namespace Windows::Foundation::Collections;
+using namespace Platform::Collections;
 
 Direct2DManager* Direct2DManager::m_instance;
 UINT Direct2DManager::s_clientCount = 0;

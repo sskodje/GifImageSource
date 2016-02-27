@@ -15,6 +15,13 @@ using namespace Windows::Networking::BackgroundTransfer;
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Web::Http;
+using namespace Platform;
+using namespace Windows::UI::Xaml::Interop;
+using namespace Windows::UI::Xaml;
+using namespace Windows::Foundation;
+using namespace Windows::Storage;
+using namespace Windows::UI::Xaml::Media::Animation;
+using namespace Microsoft::WRL;
 
 AnimationBehavior::AnimationBehavior()
 {
@@ -231,9 +238,9 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 	{
 		if (Windows::ApplicationModel::DesignMode::DesignModeEnabled)
 		{
-				BitmapImage^ bitmap = ref new BitmapImage(uriSource);
-				image->Source = bitmap;
-				return;
+			BitmapImage^ bitmap = ref new BitmapImage(uriSource);
+			image->Source = bitmap;
+			return;
 		}
 		ClearImageSource(image);
 		if (uriSource->SchemeName == "ms-appx" || uriSource->SchemeName == "ms-appdata")
@@ -338,17 +345,11 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 	{
 		try
 		{
-
-			//if (source->GetType() == GifImageSource::typeid)
-			//{
 			auto src = (GifImageSource^)image->Source;
 			src->StopAndClear();
-			//src->ClearResources();
-				/*	}*/
+
 			auto token = GetImageUnloadedEventToken(image);
 			image->Unloaded -= token;
-			//auto loadedToken = GetImageLoadedEventToken(image);
-			//image->Loaded -= loadedToken;
 		}
 		catch (Exception^ ex)
 		{

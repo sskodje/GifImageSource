@@ -3,100 +3,92 @@
 #include <shcore.h>
 #include <ppl.h>
 
-using namespace Platform;
-using namespace concurrency;
-using namespace Windows::UI::Xaml::Interop;
-using namespace Windows::UI::Xaml;
-using namespace Windows::Foundation;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Streams;
-using namespace Windows::UI::Xaml::Media::Animation;
 namespace GifImage
 {
 	ref class AnimationBehavior;
-	public delegate void ErrorEventHandler(Object^ sender, Platform::String^ error);
-	public delegate void ImageLoadedEventHandler(Object^ sender, GifImageSource^ imageSource);
+	public delegate void ErrorEventHandler(Platform::Object^ sender, Platform::String^ error);
+	public delegate void ImageLoadedEventHandler(Platform::Object^ sender, GifImageSource^ imageSource);
 	public ref class AnimationBehavior sealed
 	{
 	public:
 		AnimationBehavior();
 		virtual~AnimationBehavior();
 
-		static property DependencyProperty^ ImageUri
+		static property Windows::UI::Xaml::DependencyProperty^ ImageUri
 		{
-			DependencyProperty^ get()
+			Windows::UI::Xaml::DependencyProperty^ get()
 			{
 				return s_imageUriValueProperty;
 			}
 		};
-		static Uri^ GetImageUriSource(UIElement^ element);
-		static void SetImageUriSource(UIElement^ element, Uri^ value);
+		static Windows::Foundation::Uri^ GetImageUriSource(Windows::UI::Xaml::UIElement^ element);
+		static void SetImageUriSource(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::Uri^ value);
 
-		static property DependencyProperty^ ImageStream
+		static property Windows::UI::Xaml::DependencyProperty^ ImageStream
 		{
-			DependencyProperty^ get()
+			Windows::UI::Xaml::DependencyProperty^ get()
 			{
 				return s_imageStreamValueProperty;
 			}
 		};
-		static IRandomAccessStream^ GetImageStreamSource(UIElement^ element);
-		static void SetImageStreamSource(UIElement^ element, IRandomAccessStream^ value);
+		static  Windows::Storage::Streams::IRandomAccessStream^ GetImageStreamSource(Windows::UI::Xaml::UIElement^ element);
+		static void SetImageStreamSource(Windows::UI::Xaml::UIElement^ element, Windows::Storage::Streams::IRandomAccessStream^ value);
 
-		static property DependencyProperty^ RepeatBehavior
+		static property Windows::UI::Xaml::DependencyProperty^ RepeatBehavior
 		{
-			DependencyProperty^ get()
+			Windows::UI::Xaml::DependencyProperty^ get()
 			{
 				return s_repeatBehaviorProperty;
 			}
 		};
 
-		static Windows::UI::Xaml::Media::Animation::RepeatBehavior  GetRepeatBehavior(UIElement^ element);
-		static void SetRepeatBehavior(UIElement^ element, Windows::UI::Xaml::Media::Animation::RepeatBehavior value);
+		static Windows::UI::Xaml::Media::Animation::RepeatBehavior  GetRepeatBehavior(Windows::UI::Xaml::UIElement^ element);
+		static void SetRepeatBehavior(Windows::UI::Xaml::UIElement^ element, Windows::UI::Xaml::Media::Animation::RepeatBehavior value);
 
-		static property DependencyProperty^ AutoStart
+		static property Windows::UI::Xaml::DependencyProperty^ AutoStart
 		{
-			DependencyProperty^ get()
+			Windows::UI::Xaml::DependencyProperty^ get()
 			{
 				return s_autoStartProperty;
 			}
 		};
 
-		static Platform::Boolean  GetAutoStart(UIElement^ element);
-		static void SetAutoStart(UIElement^ element, Platform::Boolean value);
+		static Platform::Boolean  GetAutoStart(Windows::UI::Xaml::UIElement^ element);
+		static void SetAutoStart(Windows::UI::Xaml::UIElement^ element, Platform::Boolean value);
 
 
 
 
-		static GifImageSource^ GetGifImageSource(UIElement^ element);
+		static GifImageSource^ GetGifImageSource(Windows::UI::Xaml::UIElement^ element);
 		static event ImageLoadedEventHandler^ OnImageLoaded;
 		static event ErrorEventHandler^ OnError;
 
 	private:
-		static void s_imageUriChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
-		static void s_imageStreamChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
-		static void s_repeatBehaviorChanged(DependencyObject^ target, DependencyPropertyChangedEventArgs^ args);
-		static DependencyProperty^ s_imageUriValueProperty;
-		static DependencyProperty^ s_imageStreamValueProperty;
-		static DependencyProperty^ s_imageLoadedEventTokenProperty;
-		static DependencyProperty^ s_imageUnloadedEventTokenProperty;
-		static DependencyProperty^ s_repeatBehaviorProperty;
-		static DependencyProperty^ s_autoStartProperty;
+		static void s_imageUriChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
+		static void s_imageStreamChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
+		static void s_repeatBehaviorChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
+		static Windows::UI::Xaml::DependencyProperty^ s_imageUriValueProperty;
+		static Windows::UI::Xaml::DependencyProperty^ s_imageStreamValueProperty;
+		static Windows::UI::Xaml::DependencyProperty^ s_imageLoadedEventTokenProperty;
+		static Windows::UI::Xaml::DependencyProperty^ s_imageUnloadedEventTokenProperty;
+		static Windows::UI::Xaml::DependencyProperty^ s_repeatBehaviorProperty;
+		static Windows::UI::Xaml::DependencyProperty^ s_autoStartProperty;
 
 
-		static void LoadSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);
-		static concurrency::task<GifImageSource^> GetGifImageSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource);
-		static concurrency::task<GifImageSource^> GetGifImageSourceFromStream(UIElement^ element, IRandomAccessStream^ stream);
+		static void LoadSourceFromStorageFile(Windows::UI::Xaml::UIElement^ element, Windows::Storage::IStorageFile^ file, Windows::Foundation::Uri^ uriSource);
+		static concurrency::task<GifImageSource^> GetGifImageSourceFromStorageFile(Windows::UI::Xaml::UIElement^ element, Windows::Storage::IStorageFile^ file, Windows::Foundation::Uri^ uriSource);
+		static concurrency::task<GifImageSource^> GetGifImageSourceFromStream(Windows::UI::Xaml::UIElement^ element, Windows::Storage::Streams::IRandomAccessStream^ stream);
 
-		static Windows::Foundation::EventRegistrationToken GetImageLoadedEventToken(UIElement^ element);
-		static void SetImageLoadedEventToken(UIElement^ element, Object^ value);
+		static Windows::Foundation::EventRegistrationToken GetImageLoadedEventToken(Windows::UI::Xaml::UIElement^ element);
+		static void SetImageLoadedEventToken(Windows::UI::Xaml::UIElement^ element, Platform::Object^ value);
 
-		static Windows::Foundation::EventRegistrationToken GetImageUnloadedEventToken(UIElement^ element);
-		static void SetImageUnloadedEventToken(UIElement^ element, Windows::Foundation::EventRegistrationToken value);
+		static Windows::Foundation::EventRegistrationToken GetImageUnloadedEventToken(Windows::UI::Xaml::UIElement^ element);
+		static void SetImageUnloadedEventToken(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::EventRegistrationToken value);
 
-		static bool IsLoaded(FrameworkElement^ element);
-		static void InitAnimation(UIElement^ img, Uri^ uriSource);
-		static void InitAnimation(UIElement^ img, IRandomAccessStream^ streamSource);
-		static void ClearImageSource(UIElement^ element);
+		static bool IsLoaded(Windows::UI::Xaml::FrameworkElement^ element);
+		static void InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Foundation::Uri^ uriSource);
+		static void InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Storage::Streams::IRandomAccessStream^ streamSource);
+		static void ClearImageSource(Windows::UI::Xaml::UIElement^ element);
 
 
 		static void OnLoaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
