@@ -381,7 +381,10 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 		{
 			cancel_current_task();
 		}
-		if (m_bitmaps.at(index) != nullptr || m_realtimeBitmapBuffer.at(index) != nullptr)
+		if (m_bitmaps.size()==0
+			|| m_bitmaps.at(index) != nullptr
+			|| m_realtimeBitmapBuffer.size()==0
+			|| m_realtimeBitmapBuffer.at(index) != nullptr)
 			continue;
 		IWICFormatConverter *pConverter = nullptr;
 		IWICBitmapFrameDecode *pWicFrame = nullptr;
@@ -449,11 +452,13 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 			&& index < MAX_CACHED_FRAMES_PER_GIF
 			&& (index == 0 || m_bitmaps.at(index - 1) != nullptr))
 		{
-			m_bitmaps[index] = pRawFrame;
+			if (m_bitmaps.size()>index)
+				m_bitmaps[index] = pRawFrame;
 		}
 		else
 		{
-			m_realtimeBitmapBuffer[index] = pRawFrame;
+			if (m_realtimeBitmapBuffer.size() > index)
+				m_realtimeBitmapBuffer[index] = pRawFrame;
 		}
 		PropVariantClear(&propValue);
 
@@ -508,7 +513,6 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 			CreateStreamOverRandomAccessStream(
 				reinterpret_cast<IUnknown*>(pStream),
 				IID_PPV_ARGS(&pIStream)));
-
 		LoadImage(pIStream.Get());
 
 	});
@@ -623,9 +627,6 @@ void GifImageSource::LoadImage(IStream *pStream)
 			});
 		}
 	}
-
-
-
 	PropVariantClear(&var);
 }
 
@@ -722,7 +723,7 @@ void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 	auto currentWindow = Window::Current;
 	if (currentWindow == nullptr)
 	{
-		throw ref new Exception(E_FAIL,"Gif must have a window parent");
+		throw ref new Exception(E_FAIL, "Gif must have a window parent");
 	}
 	m_windowID = currentWindow->GetHashCode();
 
@@ -889,9 +890,7 @@ long GifImageSource::SetNextInterval()
 		delay = 10; // default to 100ms if delay is too short
 	}
 
-	auto timespan = TimeSpan();
-	timespan.Duration = 100000L * delay; // 10ms * delay. 
-	return timespan.Duration / 10000;
+	return 10 * delay; // 10ms * delay. 
 }
 
 void GifImageSource::Start()
@@ -1013,6 +1012,7 @@ void GifImageSource::OnTick()
 					}
 				}
 			}));
+
 			WaitForAsync(renderFrameAction);
 
 		}
@@ -1042,7 +1042,7 @@ void GifImageSource::CheckMemoryLimits()
 #if WINDOWS_PHONE_DLL
 	double mbMemoryLimit = Windows::System::MemoryManager::AppMemoryUsageLimit / 1024 / 1024;
 	double mbMemoryUsed = Windows::System::MemoryManager::AppMemoryUsage / 1024 / 1024;
-	OutputDebugString(("Memory usage increased to: " + mbMemoryUsed + "mb / " + mbMemoryLimit + "mb\r\n")->Data());
+	//OutputDebugString(("Memory usage is: " + mbMemoryUsed + "mb / " + mbMemoryLimit + "mb\r\n")->Data());
 	double  percentUsed = (mbMemoryUsed / mbMemoryLimit) * 100;
 	if (m_canCacheMoreFrames == true)
 	{

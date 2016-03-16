@@ -85,6 +85,10 @@ namespace GifImage
 		static Windows::Foundation::EventRegistrationToken GetImageUnloadedEventToken(Windows::UI::Xaml::UIElement^ element);
 		static void SetImageUnloadedEventToken(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::EventRegistrationToken value);
 
+
+		/// <summary>
+		/// Returns true if the FrameworkElement is in the visual tree
+		/// </summary>
 		static bool IsLoaded(Windows::UI::Xaml::FrameworkElement^ element);
 		static void InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Foundation::Uri^ uriSource);
 		static void InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Storage::Streams::IRandomAccessStream^ streamSource);

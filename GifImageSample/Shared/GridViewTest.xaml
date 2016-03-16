@@ -30,6 +30,7 @@
                              Stretch="Uniform"
                              StretchDirection="DownOnly">
                         <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
+                               
                                Loaded="Image_Loaded"
                                Unloaded="Image_Unloaded" />
                     </Viewbox>

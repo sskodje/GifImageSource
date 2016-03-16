@@ -52,7 +52,6 @@
                             <Viewbox Height="100"
                                      Stretch="Uniform"
                                      StretchDirection="DownOnly">
-
                                 <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
                                        gs:AnimationBehavior.AutoStart="True" />
                             </Viewbox>
