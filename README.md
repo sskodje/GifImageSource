@@ -69,6 +69,10 @@ GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
   source.Stop();
 ```
+**Caching:**
+
+Downloaded images are cached in a folder named "GifImageSource" in the ApplicationData.TemporaryFolder. It's up to the app author using this library to clean up these resources as they see fit.
+
 How it works:
 --------
 Having a need for a GIF rendering library for a project, i tried out existing open source libraries out there. Each had strengths and weaknesses. 
