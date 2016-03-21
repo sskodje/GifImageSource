@@ -2,6 +2,10 @@
 #include "pch.h"
 #include <shcore.h>
 #include <chrono>
+
+//using namespace Platform;
+//using namespace  Windows::Security::Cryptography::Core;
+//using namespace Windows::Security::Cryptography;
 namespace Utilities
 {
 	template <typename Func>
@@ -64,6 +68,69 @@ namespace Utilities
 			}
 		}
 		return s;
+	} 
+
+	static std::wstring StringToWideString(const std::string& s) {
+		int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), s.length(), NULL, 0);
+		std::wstring ws(L"", len);
+		wchar_t* pWSBuf = const_cast<wchar_t*>(ws.c_str());
+		MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, pWSBuf, len);
+		return ws;
+	}
+
+	static std::string WideStringToString(const std::wstring& ws) {
+		int len = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), ws.length(), 0, 0, NULL, NULL);
+		std::string r("", len);
+		char* pRBuf = const_cast<char*>(r.c_str());
+		WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), ws.length(), pRBuf, len, NULL, NULL);
+		return r;
+	}
+
+	static Platform::String^ LPSTRToPlatformString(const char* lpstr) {
+		if (lpstr == nullptr || strlen(lpstr) == 0)
+			return ref new Platform::String();
+
+		int len = MultiByteToWideChar(CP_UTF8, 0, lpstr, strlen(lpstr), NULL, 0);
+		auto ps = ref new Platform::String(L"", len);
+		wchar_t* pPSBuf = const_cast<wchar_t*>(ps->Data());
+		MultiByteToWideChar(CP_UTF8, 0, lpstr, -1, pPSBuf, len);
+		return ps;
+	}
+
+	static Platform::String^ StringToPlatformString(const std::string& s) {
+		if (s.empty())
+			return ref new Platform::String();
+
+		int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), s.length(), NULL, 0);
+		auto ps = ref new Platform::String(L"", len);
+		wchar_t* pPSBuf = const_cast<wchar_t*>(ps->Data());
+		MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, pPSBuf, len);
+		return ps;
+	}
+
+	static std::string PlatformStringToString(Platform::String^ ps) {
+		int len = WideCharToMultiByte(CP_UTF8, 0, ps->Data(), ps->Length(), 0, 0, NULL, NULL);
+		std::string r("", len);
+		char* pRBuf = const_cast<char*>(r.c_str());
+		WideCharToMultiByte(CP_UTF8, 0, ps->Data(), ps->Length(), pRBuf, len, NULL, NULL);
+		return r;
+	}
+
+	static std::string GetFileExtension(std::string file) {
+
+		std::size_t found = file.find_last_of(".");
+		std::string ext = file.substr(found);
+		return ext;
+	}
+
+	 static Platform::String^ GetCacheFileName(Platform::String^ str)
+	{
+		auto provider = Windows::Security::Cryptography::Core::HashAlgorithmProvider::OpenAlgorithm(Windows::Security::Cryptography::Core::HashAlgorithmNames::Md5);
+		Windows::Security::Cryptography::Core::CryptographicHash^ objHash = provider->CreateHash();
+		Windows::Storage::Streams::IBuffer^ buffMsg1 = Windows::Security::Cryptography::CryptographicBuffer::ConvertStringToBinary(str, Windows::Security::Cryptography::BinaryStringEncoding::Utf8);
+		objHash->Append(buffMsg1);
+		Windows::Storage::Streams::IBuffer^ buffHash1 = objHash->GetValueAndReset();
+		return Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(buffHash1);
 	}
 }
 

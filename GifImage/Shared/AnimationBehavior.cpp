@@ -249,78 +249,80 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 		}
 		else if (uriSource->SchemeName == "http" || uriSource->SchemeName == "https")
 		{
-			StorageFolder^ folder = ApplicationData::Current->TemporaryFolder;
-			String^ fileName = uriSource->AbsoluteUri;
-			std::wstring wsstr(fileName->Data());
-			wsstr = Utilities::RemoveForbiddenChar(wsstr);
-			String^ sanitizedString = ref new String(wsstr.c_str(), wsstr.length());
-
-			task<StorageFile^>(folder->CreateFileAsync(sanitizedString, CreationCollisionOption::OpenIfExists))
-				.then([uriSource, image](StorageFile^ file)
+			StorageFolder^ tempFolder = ApplicationData::Current->TemporaryFolder;
+			task<StorageFolder^>(tempFolder->CreateFolderAsync("GifImageSource", Windows::Storage::CreationCollisionOption::OpenIfExists))
+				.then([uriSource, image](StorageFolder^ folder)
 			{
-				if (GetImageUriSource(image) == uriSource)
+				Platform::String^ ext = Utilities::StringToPlatformString(Utilities::GetFileExtension(Utilities::PlatformStringToString(uriSource->AbsoluteUri)));
+				Platform::String^ cacheName = Utilities::GetCacheFileName(uriSource->AbsoluteUri)+ext;//ref new String(wsstr.c_str(), wsstr.length());
+			
+				task<StorageFile^>(folder->CreateFileAsync(cacheName, CreationCollisionOption::OpenIfExists))
+					.then([uriSource, image](StorageFile^ file)
 				{
-					task<Windows::Storage::FileProperties::BasicProperties^>(file->GetBasicPropertiesAsync())
-						.then([uriSource, file, image](Windows::Storage::FileProperties::BasicProperties^ properties)
+					if (GetImageUriSource(image) == uriSource)
 					{
-						if (properties->Size > 0)
+						task<Windows::Storage::FileProperties::BasicProperties^>(file->GetBasicPropertiesAsync())
+							.then([uriSource, file, image](Windows::Storage::FileProperties::BasicProperties^ properties)
 						{
-
-							LoadSourceFromStorageFile(image, file, uriSource);
-						}
-						else
-						{
-							if (GetImageUriSource(image) == uriSource)
+							if (properties->Size > 0)
 							{
-								auto httpClient = ref new HttpClient();
-								try
-								{
-									task<HttpResponseMessage^>(httpClient->GetAsync(uriSource)).then([file, image, uriSource](HttpResponseMessage^ message)
-									{
-										if (message->EnsureSuccessStatusCode())
-										{
-											task<IBuffer^>(message->Content->ReadAsBufferAsync()).then([file, image, uriSource](IBuffer^ buffer)
-											{
-												task<void>(FileIO::WriteBufferAsync(file, buffer)).then([file, image, uriSource]()
-												{
-													LoadSourceFromStorageFile(image, file, uriSource);
-												});
-											});
-										}
-									}).then([file, image](task<void> t)
-									{
-										bool success = false;
-										try
-										{
-											t.get();
-											success = true;
-										}
-										catch (Exception^ ex)
-										{
-											OnError(image, "GifImageSource load failed with error: " + ex->ToString());
-										}
 
-										if (!success)
-										{
-
-											file->DeleteAsync();
-										}
-									});
-
-								}
-								catch (Exception^ ex)
-								{
-									// Details in ex.Message and ex.HResult.       
-									file->DeleteAsync();
-								}
+								LoadSourceFromStorageFile(image, file, uriSource);
 							}
 							else
-								OutputDebugString(L"Cancelled CreateDownload\r\n");
-						}
-					});
-				}
-				else
-					OutputDebugString(L"Cancelled GetBasicPropertiesAsync\r\n");
+							{
+								if (GetImageUriSource(image) == uriSource)
+								{
+									auto httpClient = ref new HttpClient();
+									try
+									{
+										task<HttpResponseMessage^>(httpClient->GetAsync(uriSource)).then([file, image, uriSource](HttpResponseMessage^ message)
+										{
+											if (message->EnsureSuccessStatusCode())
+											{
+												task<IBuffer^>(message->Content->ReadAsBufferAsync()).then([file, image, uriSource](IBuffer^ buffer)
+												{
+													task<void>(FileIO::WriteBufferAsync(file, buffer)).then([file, image, uriSource]()
+													{
+														LoadSourceFromStorageFile(image, file, uriSource);
+													});
+												});
+											}
+										}).then([file, image](task<void> t)
+										{
+											bool success = false;
+											try
+											{
+												t.get();
+												success = true;
+											}
+											catch (Exception^ ex)
+											{
+												OnError(image, "GifImageSource load failed with error: " + ex->ToString());
+											}
+
+											if (!success)
+											{
+
+												file->DeleteAsync();
+											}
+										});
+
+									}
+									catch (Exception^ ex)
+									{
+										// Details in ex.Message and ex.HResult.       
+										file->DeleteAsync();
+									}
+								}
+								else
+									OutputDebugString(L"Cancelled CreateDownload\r\n");
+							}
+						});
+					}
+					else
+						OutputDebugString(L"Cancelled GetBasicPropertiesAsync\r\n");
+				});
 			});
 		}
 		else
