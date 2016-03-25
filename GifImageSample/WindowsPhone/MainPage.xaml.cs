@@ -23,20 +23,12 @@ namespace GifImageSample
             this.InitializeComponent();
             AnimationBehavior.OnError += AnimationBehavior_OnError;
             AnimationBehavior.OnImageLoaded += AnimationBehavior_OnImageLoaded;
-            List<MyModel> items = new List<MyModel>();
-
-            items.AddRange(Enumerable.Range(1, 23).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
-            items.Add(new MyModel(new Uri("http://i.imgur.com/9Bo0CZi.gif")));
-            items.Add(new MyModel(new Uri("http://i.imgur.com/qeu10ds.gif")));
-            items.Add(new MyModel(new Uri("https://media.giphy.com/media/xT77XR3gI2c7NiDzEY/giphy.gif")));
-            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/canvas_bgnd.gif")));
-            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_basics/dl_world_anim.gif")));
-            items.Add(new MyModel(new Uri("http://www.imagemagick.org/Usage/anim_opt/bunny_bgnd_lzw_gifsicle.gif")));
-            items.Add(new MyModel(new Uri("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg/800px-Tour_Eiffel_Wikimedia_Commons.jpg")));
-            items.Add(new MyModel(new Uri("http://i.imgur.com/YHoBqLR.gif")));
+            List<MyModel> items = MyModel.CreateTestModels();
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
         }
+
+
 
         private void AnimationBehavior_OnImageLoaded(object sender, GifImageSource imageSource)
         {
