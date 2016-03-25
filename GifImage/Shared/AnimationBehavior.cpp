@@ -253,8 +253,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 			task<StorageFolder^>(tempFolder->CreateFolderAsync("GifImageSource", Windows::Storage::CreationCollisionOption::OpenIfExists))
 				.then([uriSource, image](StorageFolder^ folder)
 			{
-				Platform::String^ ext = Utilities::StringToPlatformString(Utilities::GetFileExtension(Utilities::PlatformStringToString(uriSource->AbsoluteUri)));
-				Platform::String^ cacheName = Utilities::GetCacheFileName(uriSource->AbsoluteUri)+ext;//ref new String(wsstr.c_str(), wsstr.length());
+				Platform::String^ cacheName = Utilities::GetCacheFileName(uriSource->AbsoluteUri);
 			
 				task<StorageFile^>(folder->CreateFileAsync(cacheName, CreationCollisionOption::OpenIfExists))
 					.then([uriSource, image](StorageFile^ file)
@@ -344,7 +343,7 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 		}
 		catch (Exception^ ex)
 		{
-			OnError(image, "ClearImageSource failed with error: " + ex->ToString());
+			//OnError(image, "ClearImageSource failed with error: " + ex->ToString());
 		}
 
 		try
