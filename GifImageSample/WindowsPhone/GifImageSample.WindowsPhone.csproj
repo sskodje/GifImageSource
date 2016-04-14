@@ -114,9 +114,6 @@
     <SDKReference Include="BehaviorsXamlSDKManaged, Version=12.0">
       <Name>Behaviors SDK %28XAML%29</Name>
     </SDKReference>
-    <SDKReference Include="Telerik UI For Windows Universal, Version=2015.1.420.45">
-      <Name>Telerik UI For Windows Universal</Name>
-    </SDKReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
     <VisualStudioVersion>12.0</VisualStudioVersion>

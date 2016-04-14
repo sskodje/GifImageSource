@@ -179,15 +179,10 @@ void GifImage::AnimationBehavior::s_repeatBehaviorChanged(DependencyObject ^ d, 
 
 GifImageSource^ AnimationBehavior::GetGifImageSource(UIElement^ element)
 {
-	Image^ img = safe_cast<Image^>(element);
+	auto img = dynamic_cast<Image^>(element);
 	if (img != nullptr)
 	{
-		if (img->Source != nullptr)
-		{
-			GifImageSource^ src = safe_cast<GifImageSource^>(img->Source);
-			if (src != nullptr)
-				return src;
-		}
+		return dynamic_cast<GifImageSource^>(img->Source);
 	}
 	return nullptr;
 }
@@ -254,7 +249,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 				.then([uriSource, image](StorageFolder^ folder)
 			{
 				Platform::String^ cacheName = Utilities::GetCacheFileName(uriSource->AbsoluteUri);
-			
+
 				task<StorageFile^>(folder->CreateFileAsync(cacheName, CreationCollisionOption::OpenIfExists))
 					.then([uriSource, image](StorageFile^ file)
 				{
