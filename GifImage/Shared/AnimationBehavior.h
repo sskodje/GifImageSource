@@ -3,11 +3,13 @@
 #include <shcore.h>
 #include <ppl.h>
 
+
 namespace GifImage
 {
 	ref class AnimationBehavior;
 	public delegate void ErrorEventHandler(Platform::Object^ sender, Platform::String^ error);
-	public delegate void ImageLoadedEventHandler(Platform::Object^ sender, GifImageSource^ imageSource);
+	public delegate void ImageLoadedEventHandler(Platform::Object^ sender, Windows::UI::Xaml::Media::ImageSource^ imageSource);
+
 	public ref class AnimationBehavior sealed
 	{
 	public:
@@ -71,13 +73,17 @@ namespace GifImage
 		static Windows::UI::Xaml::DependencyProperty^ s_imageStreamValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageLoadedEventTokenProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageUnloadedEventTokenProperty;
+		static Windows::UI::Xaml::DependencyProperty^ s_imageOpenedEventTokenProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_repeatBehaviorProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_autoStartProperty;
 
+		static Platform::Collections::Map<Platform::String^,int>^ s_loadingImages;
 
 		static void LoadSourceFromStorageFile(Windows::UI::Xaml::UIElement^ element, Windows::Storage::IStorageFile^ file, Windows::Foundation::Uri^ uriSource);
 		static concurrency::task<GifImageSource^> GetGifImageSourceFromStorageFile(Windows::UI::Xaml::UIElement^ element, Windows::Storage::IStorageFile^ file, Windows::Foundation::Uri^ uriSource);
 		static concurrency::task<GifImageSource^> GetGifImageSourceFromStream(Windows::UI::Xaml::UIElement^ element, Windows::Storage::Streams::IRandomAccessStream^ stream);
+
+		static concurrency::task<Windows::Storage::StorageFile^> GetStorageFileForImageCache(Windows::Foundation::Uri^ uriSource);
 
 		static Windows::Foundation::EventRegistrationToken GetImageLoadedEventToken(Windows::UI::Xaml::UIElement^ element);
 		static void SetImageLoadedEventToken(Windows::UI::Xaml::UIElement^ element, Platform::Object^ value);
@@ -85,6 +91,8 @@ namespace GifImage
 		static Windows::Foundation::EventRegistrationToken GetImageUnloadedEventToken(Windows::UI::Xaml::UIElement^ element);
 		static void SetImageUnloadedEventToken(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::EventRegistrationToken value);
 
+		static Windows::Foundation::EventRegistrationToken GetImageOpenedEventToken(Windows::UI::Xaml::UIElement^ element);
+		static void SetImageOpenedEventToken(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::EventRegistrationToken value);
 
 		/// <summary>
 		/// Returns true if the FrameworkElement is in the visual tree
@@ -98,6 +106,7 @@ namespace GifImage
 		static void OnLoaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
 		static void OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
 
-	};
+		static void OnImageOpened(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
+};
 }
 

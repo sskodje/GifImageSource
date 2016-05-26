@@ -3,9 +3,6 @@
 #include "Robuffer.h"
 #include "Utilities.h";
 
-
-
-
 using namespace GifImage;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Xaml::Controls;
@@ -23,8 +20,10 @@ using namespace Windows::Storage;
 using namespace Windows::UI::Xaml::Media::Animation;
 using namespace Microsoft::WRL;
 
+Platform::Collections::Map<Platform::String^, int>^ AnimationBehavior::s_loadingImages;
 AnimationBehavior::AnimationBehavior()
 {
+
 }
 
 
@@ -86,6 +85,24 @@ void GifImage::AnimationBehavior::SetImageUnloadedEventToken(UIElement ^ element
 {
 	element->SetValue(s_imageUnloadedEventTokenProperty, value);
 }
+
+DependencyProperty^ AnimationBehavior::s_imageOpenedEventTokenProperty = DependencyProperty::Register(
+	"ImageOpenedEventToken",
+	Windows::Foundation::EventRegistrationToken::typeid,
+	AnimationBehavior::typeid,
+	ref new PropertyMetadata(nullptr)
+	);
+Windows::Foundation::EventRegistrationToken AnimationBehavior::GetImageOpenedEventToken(UIElement ^ element)
+{
+	Windows::Foundation::EventRegistrationToken val = safe_cast<Windows::Foundation::EventRegistrationToken>(element->GetValue(s_imageOpenedEventTokenProperty));
+	return val;
+}
+
+void GifImage::AnimationBehavior::SetImageOpenedEventToken(UIElement ^ element, Windows::Foundation::EventRegistrationToken value)
+{
+	element->SetValue(s_imageOpenedEventTokenProperty, value);
+}
+
 #pragma endregion
 #pragma region Attached Properties
 DependencyProperty^ AnimationBehavior::s_repeatBehaviorProperty = DependencyProperty::RegisterAttached(
@@ -167,7 +184,8 @@ void AnimationBehavior::s_imageStreamChanged(DependencyObject^ d, DependencyProp
 void GifImage::AnimationBehavior::s_repeatBehaviorChanged(DependencyObject ^ d, DependencyPropertyChangedEventArgs ^ args)
 {
 	Image^ image = (Image^)d;
-	if (image->Source != nullptr && image->Source->GetType() == GifImageSource::typeid)
+	GifImageSource^ gifImageSource = dynamic_cast<GifImageSource^>(image->Source);
+	if (gifImageSource != nullptr)
 	{
 		if (GetImageUriSource(image) != nullptr)
 			InitAnimation(image, GetImageUriSource(image));
@@ -244,84 +262,164 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 		}
 		else if (uriSource->SchemeName == "http" || uriSource->SchemeName == "https")
 		{
-			StorageFolder^ tempFolder = ApplicationData::Current->TemporaryFolder;
-			task<StorageFolder^>(tempFolder->CreateFolderAsync("GifImageSource", Windows::Storage::CreationCollisionOption::OpenIfExists))
-				.then([uriSource, image](StorageFolder^ folder)
-			{
-				Platform::String^ cacheName = Utilities::GetCacheFileName(uriSource->AbsoluteUri);
 
-				task<StorageFile^>(folder->CreateFileAsync(cacheName, CreationCollisionOption::OpenIfExists))
-					.then([uriSource, image](StorageFile^ file)
+			auto getFileTask = AnimationBehavior::GetStorageFileForImageCache(uriSource);
+			auto ui = task_continuation_context::use_current();
+			getFileTask.then([uriSource, image,ui](StorageFile^ file)
+			{
+				if (GetImageUriSource(image) == uriSource)
 				{
-					if (GetImageUriSource(image) == uriSource)
+
+					concurrency::task<void>([uriSource, image, file, ui]()
+					{
+						if (s_loadingImages == nullptr)
+							s_loadingImages = ref new Platform::Collections::Map<Platform::String^, int>();
+						if (!s_loadingImages->HasKey(file->Name))
+						{
+							s_loadingImages->Insert(file->Name, 1);
+							OutputDebugString(("Adding to sync list: " + file->Name + "\r\n")->Data());
+						}
+						else
+						{
+							int waitMillis = 5;
+							int i = 0;
+							while (s_loadingImages->HasKey(file->Name))
+							{
+								wait(waitMillis);
+								OutputDebugString(("Waiting for sync on file: " + file->Name + "\r\n")->Data());
+								i++;
+								if (waitMillis*i > 60000)//timeout after one minute
+								{
+									throw ref new Exception(E_ABORT);
+								}
+							}
+						}
+					}, ui).then([uriSource, image, file, ui]()
 					{
 						task<Windows::Storage::FileProperties::BasicProperties^>(file->GetBasicPropertiesAsync())
 							.then([uriSource, file, image](Windows::Storage::FileProperties::BasicProperties^ properties)
 						{
-							if (properties->Size > 0)
+							if (properties != nullptr && properties->Size > 0)
 							{
 
 								LoadSourceFromStorageFile(image, file, uriSource);
+								if (s_loadingImages->HasKey(file->Name))
+									s_loadingImages->Remove(file->Name);
 							}
 							else
 							{
 								if (GetImageUriSource(image) == uriSource)
 								{
 									auto httpClient = ref new HttpClient();
-									try
+									task<HttpResponseMessage^>(httpClient->GetAsync(uriSource))
+										.then([file, image, uriSource](HttpResponseMessage^ message)
 									{
-										task<HttpResponseMessage^>(httpClient->GetAsync(uriSource)).then([file, image, uriSource](HttpResponseMessage^ message)
+										if (message->EnsureSuccessStatusCode())
 										{
-											if (message->EnsureSuccessStatusCode())
+											task<IBuffer^>(message->Content->ReadAsBufferAsync())
+												.then([file, image, uriSource](IBuffer^ buffer)
 											{
-												task<IBuffer^>(message->Content->ReadAsBufferAsync()).then([file, image, uriSource](IBuffer^ buffer)
+												task<void>(FileIO::WriteBufferAsync(file, buffer))
+													.then([file, image, uriSource]()
 												{
-													task<void>(FileIO::WriteBufferAsync(file, buffer)).then([file, image, uriSource]()
+													LoadSourceFromStorageFile(image, file, uriSource);
+												}).then([file, image](task<void> t)
+												{
+													try
 													{
-														LoadSourceFromStorageFile(image, file, uriSource);
-													});
+														t.get();
+													}
+													catch (Exception^ ex)
+													{
+														OnError(image, "GifImageSource cache write failed with error: " + ex->ToString());
+													}
+													if (s_loadingImages->HasKey(file->Name))
+														s_loadingImages->Remove(file->Name);
+													OutputDebugString(("Removing from sync list: " + file->Name + "\r\n")->Data());
 												});
-											}
-										}).then([file, image](task<void> t)
-										{
-											bool success = false;
-											try
+											}).then([image](task<void> t)
 											{
-												t.get();
-												success = true;
-											}
-											catch (Exception^ ex)
-											{
-												OnError(image, "GifImageSource load failed with error: " + ex->ToString());
-											}
-
-											if (!success)
-											{
-
-												file->DeleteAsync();
-											}
-										});
-
-									}
-									catch (Exception^ ex)
+												try
+												{
+													t.get();
+												}
+												catch (Exception^ ex)
+												{
+													OnError(image, "GifImageSource stream read failed with error: " + ex->ToString());
+												}
+											});
+										}
+									}).then([file, image](task<void> t)
 									{
-										// Details in ex.Message and ex.HResult.       
-										file->DeleteAsync();
-									}
+										try
+										{
+											t.get();
+										}
+										catch (Exception^ ex)
+										{
+											OutputDebugString(("Removing from sync list: " + file->Name + "\r\n")->Data());
+											if (s_loadingImages->HasKey(file->Name))
+												s_loadingImages->Remove(file->Name);
+											file->DeleteAsync();
+											OnError(image, "GifImageSource httpclient get failed with error: " + ex->ToString());
+										}
+									});
 								}
 								else
 									OutputDebugString(L"Cancelled CreateDownload\r\n");
 							}
-						});
-					}
-					else
-						OutputDebugString(L"Cancelled GetBasicPropertiesAsync\r\n");
-				});
-			});
+						}).then([image, ui](task<void> t)
+						{
+							try
+							{
+								t.get();
+							}
+							catch (Exception^ ex)
+							{
+								OnError(image, "GifImageSource load failed with error: " + ex->ToString());
+							}
+						}, ui);
+					}, ui).then([image,ui](task<void> t)
+					{
+						try
+						{
+							t.get();
+						}
+						catch (Exception^ ex)
+						{
+							OnError(image, "GifImageSource load failed with error: " + ex->ToString());
+						}
+					},ui);
+				}
+				else
+					OutputDebugString(L"Cancelled GetBasicPropertiesAsync\r\n");
+			},ui).then([image,ui](task<void> t)
+			{
+				try
+				{
+					t.get();
+				}
+				catch (Exception^ ex)
+				{
+					OnError(image, "GifImageSource load failed with error: " + ex->ToString());
+				}
+			},ui);
 		}
 		else
 			OnError(image, "Image URI is not in a valid format, Image Source was not set");
 	}
+}
+
+concurrency::task<StorageFile^> AnimationBehavior::GetStorageFileForImageCache(Uri^ uriSource)
+{
+	StorageFolder^ tempFolder = ApplicationData::Current->TemporaryFolder;
+	return task<StorageFolder^>(tempFolder->CreateFolderAsync("GifImageSource", Windows::Storage::CreationCollisionOption::OpenIfExists))
+		.then([uriSource](StorageFolder^ folder)
+	{
+		Platform::String^ cacheName = Utilities::GetCacheFileName(uriSource->AbsoluteUri);
+		OutputDebugString(("Creating cache file: " + cacheName + "\r\n")->Data());
+		return folder->CreateFileAsync(cacheName, CreationCollisionOption::OpenIfExists);
+	});
 }
 
 void AnimationBehavior::ClearImageSource(UIElement^ element)
@@ -333,12 +431,15 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 	{
 		try
 		{
-			auto src = (GifImageSource^)image->Source;
-			src->StopAndClear();
+			GifImageSource^ src = dynamic_cast<GifImageSource^>(source);
+			if (src != nullptr)
+			{
+				src->StopAndClear();
+			}
 		}
 		catch (Exception^ ex)
 		{
-			//OnError(image, "ClearImageSource failed with error: " + ex->ToString());
+
 		}
 
 		try
@@ -351,7 +452,6 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 
 		}
 	}
-
 	image->Source = nullptr;
 }
 
@@ -365,8 +465,6 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 		{
 			if (GetImageUriSource(image) == uriSource)
 			{
-
-
 				image->Source = imageSource;
 
 				if (GetAutoStart(image) == true)
@@ -391,20 +489,34 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 		}
 		catch (Exception^ ex)
 		{
-			OutputDebugString(ex->Message->Data());
+			OutputDebugString((ex->Message + "\r\n")->Data());
 			OnError(image, "GifImageSource load failed with error: " + ex->ToString());
 		}
 
 		if (!success)
 		{
-
 			if (GetImageUriSource(image) == uriSource)
 			{
 				BitmapImage^ bitmap = ref new BitmapImage(uriSource);
 				image->Source = bitmap;
+				auto token = image->ImageOpened += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnImageOpened);
+				SetImageOpenedEventToken(image, token);
 			}
 		}
 	});
+}
+
+void GifImage::AnimationBehavior::OnImageOpened(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e)
+{
+	Image^ image = (Image^)sender;
+	auto token = GetImageOpenedEventToken(image);
+	image->ImageOpened -= token;
+	BitmapImage^bitmap = dynamic_cast<BitmapImage^>(image->Source);
+
+	if (bitmap != nullptr)
+	{
+		OnImageLoaded(image, bitmap);
+	}
 }
 
 concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStorageFile(UIElement^ element, IStorageFile^ file, Uri^ uriSource)
@@ -525,7 +637,6 @@ void AnimationBehavior::OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::
 				}
 
 				AnimationBehavior::ClearImageSource(image);
-
 			}
 			OutputDebugString(("Unloaded image" + " (" + image->GetHashCode() + ")" + " with source: " + GetImageUriSource(image)->AbsoluteUri + "\r\n")->Data());
 		}
