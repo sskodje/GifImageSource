@@ -4,19 +4,18 @@
 #include "Direct2DManager.h"
 #include <agents.h>
 
-//using namespace Windows::UI::Xaml::Media::Animation;
-//using namespace concurrency;
-//using namespace Windows::Foundation;
-//using namespace Platform;
-
 namespace GifImage
 {
+	public delegate void EventHandler(Platform::Object^ sender);
 	[Windows::Foundation::Metadata::WebHostHidden]
 	public ref class GifImageSource sealed : Windows::UI::Xaml::Media::Imaging::SurfaceImageSource
 	{
 	public:
 		GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior);
 		virtual ~GifImageSource();
+
+		event EventHandler^ OnAnimationCompleted;
+		event EventHandler^ OnFrameChanged;
 
 		/// <summary>
 		/// Gets the width of the image.
@@ -65,6 +64,7 @@ namespace GifImage
 		/// </summary>
 		void Stop();
 
+
 		/// <summary>
 		/// Loads the image from the specified image stream.
 		/// </summary>
@@ -108,7 +108,8 @@ namespace GifImage
 		UINT m_dwPreviousFrame;
 		UINT m_bitsPerPixel;
 		UINT m_cachedKB;
-		long m_lastMemoryCheckEpochTime;
+		ULONG m_lastMemoryCheckEpochTime;
+
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
 		bool m_isCachingFrames;
@@ -133,7 +134,7 @@ namespace GifImage
 		/// </summary>
 		bool RenderFrame();
 		void CreateDeviceResources(boolean forceRecreate);
-		bool BeginDraw();
+		HRESULT BeginDraw();
 		void EndDraw();
 		void WaitForAsync(Windows::Foundation::IAsyncAction ^A);
 		void CheckMemoryLimits();
@@ -142,7 +143,10 @@ namespace GifImage
 		long SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
-		void CopyCurrentFrameToBitmap();
+
+		void OnSuspending(Platform::Object ^sender, Windows::ApplicationModel::SuspendingEventArgs ^e);
+
+		HRESULT CopyCurrentFrameToBitmap();
 
 		concurrency::cancellation_token_source cancellationTokenSource;
 		void GetRawFramesTask(int startFrame, int endFrame);

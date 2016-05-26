@@ -24,6 +24,7 @@ void Direct2DManager::ClearDeviceResource()
 	m_d2dDevice = nullptr;
 	m_dxgiDevice = nullptr;
 	m_d3dDevice = nullptr;
+	m_d3dContext = nullptr;
 }
 
 void Direct2DManager::CreateDeviceResources()
@@ -65,9 +66,10 @@ void Direct2DManager::CreateDeviceResources()
 			D3D11_SDK_VERSION,              // Always set this to D3D11_SDK_VERSION for Windows Store apps. 
 			&m_d3dDevice,                   // Returns the Direct3D device created. 
 			nullptr,
-			nullptr
+			&m_d3dContext
 			)
 		);
+
 
 
 	// Get the Direct3D 11.1 API device. 
