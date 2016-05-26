@@ -10,7 +10,7 @@
       x:Class="GifImageSample.MainPage"
       mc:Ignorable="d"
       Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-      Unloaded="Page_Unloaded">
+      Loaded="Page_Loaded">
     <Page.BottomAppBar>
         <CommandBar>
 
@@ -42,10 +42,11 @@
 
         </CommandBar>
     </Page.BottomAppBar>
-    <Grid>
+    <Grid x:Name="LayoutRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ComboBox x:Name="cbGifs"
                   Margin="5"
@@ -59,7 +60,10 @@
         </Viewbox>
         <ProgressRing x:Name="BusyIndicator"
                       Grid.Row="1"
+                      IsActive="False"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center" />
+
+        <ProgressBar x:Name="_progressBar" Grid.Row="2" />
     </Grid>
 </Page>

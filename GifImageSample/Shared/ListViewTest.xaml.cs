@@ -108,19 +108,5 @@ namespace GifImageSample
             if (Frame.CanGoBack)
                 Frame.GoBack();
         }
-
-        //private async void listViewTest_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
-        //{
-        //    Grid templateRoot = (Grid)args.ItemContainer.ContentTemplateRoot;
-        //    Image img = (Image)templateRoot.FindName("ImageControl");
-        //    if(args.Phase==0)
-        //    {
-        //        MyModel model = (MyModel)args.Item;
-
-        //        StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(model.Uri);
-        //        GifImage.AnimationBehavior.SetImageStreamSource(img, await file.OpenReadAsync());
-        //    }
-        //    args.Handled = true;
-        //}
     }
 }

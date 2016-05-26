@@ -67,7 +67,6 @@ namespace GifImageSample
             else
                 gifCount = 50;
 
-
             Items = new ObservableCollection<MyModel>(Enumerable.Range(1, gifCount).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList());
         }
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -81,10 +80,6 @@ namespace GifImageSample
                 Frame.GoBack();
         }
 
-        private void Image_Unloaded(object sender, RoutedEventArgs e)
-        {
-            ((Image)sender).Unloaded -= Image_Unloaded;
-        }
 
         private void bnAddItems_Click(object sender, RoutedEventArgs e)
         {
@@ -97,9 +92,5 @@ namespace GifImageSample
             this.Items.Remove(this.Items.Last());
         }
 
-        private void Image_Loaded(object sender, RoutedEventArgs e)
-        {
-
-        }
     }
 }

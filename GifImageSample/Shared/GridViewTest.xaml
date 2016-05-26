@@ -29,10 +29,7 @@
                              Width="120"
                              Stretch="Uniform"
                              StretchDirection="DownOnly">
-                        <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
-                               
-                               Loaded="Image_Loaded"
-                               Unloaded="Image_Unloaded" />
+                        <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}" />
                     </Viewbox>
                 </DataTemplate>
             </GridView.ItemTemplate>

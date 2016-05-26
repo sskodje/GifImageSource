@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 namespace GifImageSample
@@ -17,10 +18,16 @@ namespace GifImageSample
         {
             InitializeComponent();
             AnimationBehavior.OnError += AnimationBehavior_OnError;
+            AnimationBehavior.OnImageLoaded += AnimationBehavior_OnImageLoaded;
             List<MyModel> items = MyModel.CreateTestModels();
 
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
+        }
+
+        private void AnimationBehavior_OnImageLoaded(object sender, ImageSource imageSource)
+        {
+            BusyIndicator.IsActive = false;
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -28,9 +35,10 @@ namespace GifImageSample
             base.OnNavigatedFrom(e);
         }
 
-        private void AnimationBehavior_OnError(object sender, string s)
+        private void AnimationBehavior_OnError(object sender, string error)
         {
-            Debug.WriteLine(s);
+            Debug.WriteLine(error);
+            BusyIndicator.IsActive = false;
         }
 
         private void Load_Click(object sender, RoutedEventArgs e)
@@ -73,9 +81,10 @@ namespace GifImageSample
             this.Frame.Navigate(typeof(ListViewTest));
         }
 
-        private async void OpenGif(Uri uri)
+        private void OpenGif(Uri uri)
         {
-                AnimationBehavior.SetImageUriSource(_gifImage, uri);
+            AnimationBehavior.SetImageUriSource(_gifImage, uri);
+            BusyIndicator.IsActive = true;
         }
 
         private void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
