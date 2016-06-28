@@ -255,10 +255,21 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 		if (uriSource->SchemeName == "ms-appx" || uriSource->SchemeName == "ms-appdata")
 		{
 			auto getFileTask = create_task(StorageFile::GetFileFromApplicationUriAsync(uriSource));
-			getFileTask.then([uriSource, image](StorageFile^ file)
+			auto ui = task_continuation_context::use_current();
+			getFileTask.then([uriSource, image,ui](StorageFile^ file)
 			{
 				LoadSourceFromStorageFile(image, file, uriSource);
-			});
+			},ui).then([image,ui](task<void> t)
+			{
+				try
+				{
+					t.get();
+				}
+				catch (Exception^ ex)
+				{
+					OnError(image, "GifImageSource load failed with error: " + ex->ToString());
+				}
+			},ui);
 		}
 		else if (uriSource->SchemeName == "http" || uriSource->SchemeName == "https")
 		{
