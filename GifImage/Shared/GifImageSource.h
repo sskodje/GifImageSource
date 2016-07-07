@@ -3,6 +3,7 @@
 #include "windows.foundation.h"
 #include "Direct2DManager.h"
 #include <agents.h>
+#include <chrono>
 
 namespace GifImage
 {
@@ -114,8 +115,9 @@ namespace GifImage
 		bool m_canCacheMoreFrames;
 		bool m_isCachingFrames;
 		bool m_isDestructing;
-		bool m_isRunningRenderTask;
+		bool m_isRendering;
 		int m_windowID;
+		std::chrono::high_resolution_clock::time_point  m_nextFrameTimePoint;
 
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
@@ -126,7 +128,8 @@ namespace GifImage
 		std::vector<USHORT> m_disposals;
 
 		concurrency::timer<int> *m_durationTimer;
-	
+		Windows::Foundation::EventRegistrationToken m_RenderingToken;
+
 
 		/// <summary>
 		/// Renders a single frame and increments the current frame index.
@@ -150,9 +153,10 @@ namespace GifImage
 		concurrency::cancellation_token_source cancellationTokenSource;
 		void GetRawFramesTask(int startFrame, int endFrame);
 
-		void OnTick();
+		void RenderAndPrepareFrame();
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
 		HRESULT GetRawFrame(int uFrameIndex);
-};
+		void OnRendering(Platform::Object ^sender, Platform::Object ^args);
+	};
 }
