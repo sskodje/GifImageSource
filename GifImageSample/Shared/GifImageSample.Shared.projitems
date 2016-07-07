@@ -23,6 +23,9 @@
       <DependentUpon>GridViewTest.xaml</DependentUpon>
     </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)MyModel.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SingleGifTest.xaml.cs">
+      <DependentUpon>SingleGifTest.xaml</DependentUpon>
+    </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)SizeChange.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -31,6 +34,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="$(MSBuildThisFileDirectory)GridViewTest.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="$(MSBuildThisFileDirectory)SingleGifTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

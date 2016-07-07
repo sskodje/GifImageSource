@@ -117,7 +117,6 @@ namespace GifImage
 		bool m_isRunningRenderTask;
 		int m_windowID;
 
-
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
 		std::vector<Microsoft::WRL::ComPtr<ID2D1Bitmap>> m_bitmaps;
@@ -127,7 +126,7 @@ namespace GifImage
 		std::vector<USHORT> m_disposals;
 
 		concurrency::timer<int> *m_durationTimer;
-		concurrency::timer<int> *m_memoryTimer;
+	
 
 		/// <summary>
 		/// Renders a single frame and increments the current frame index.
@@ -155,5 +154,5 @@ namespace GifImage
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
 		HRESULT GetRawFrame(int uFrameIndex);
-	};
+};
 }

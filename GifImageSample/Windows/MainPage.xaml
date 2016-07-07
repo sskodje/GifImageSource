@@ -6,6 +6,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d"
       xmlns:gs="using:GifImage"
+      Loaded="Page_Loaded"
       Unloaded="Page_Unloaded">
 
     <Grid Background="DimGray">
@@ -15,8 +16,11 @@
         </Grid.RowDefinitions>
 
         <Viewbox StretchDirection="DownOnly">
-            <Image x:Name="_gifImage"
-                   Stretch="Uniform" />
+            <StackPanel>
+                <Image x:Name="_gifImage"
+                       Stretch="Uniform" />
+                <ProgressBar x:Name="_progressBar" />
+            </StackPanel>
         </Viewbox>
         <ProgressRing x:Name="BusyIndicator"
                       Grid.Row="0"
@@ -38,6 +42,10 @@
                           Label="load"
                           Icon="Download"
                           Click="Load_Click" />
+            <AppBarButton x:Name="AppBarButtonLoadAsStream"
+                          Label="load as stream"
+                          Icon="Download"
+                          Click="LoadAsStream_Click" />
             <AppBarButton x:Name="AppBarButtonUnload"
                           Label="unload"
                           Icon="Cancel"
@@ -61,6 +69,11 @@
             <Button Content="ListView test"
                     x:Name="BnListViewTest"
                     Click="BnListViewTest_Click"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+            <Button Content="Single Gif test"
+                    x:Name="BnSingleGifTest"
+                    Click="BnSingleGifTest_Click"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center" />
         </StackPanel>

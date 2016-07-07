@@ -27,31 +27,24 @@ namespace GifImageSample
             this.DataContext = this;
         }
 
-        private async void ClearCache()
-        {
-            try
-            {
-                StorageFolder folder = await ApplicationData.Current.TemporaryFolder.GetFolderAsync("GifImageSource");
-                await folder.DeleteAsync();
-            }
-            catch { }
-        }
 
-        private void AnimationBehavior_OnImageLoaded(object sender, ImageSource imageSource)
+        private void AnimationBehavior_OnImageLoaded(object sender, ImageSource src)
         {
             Image img = (Image)sender;
+
             if (img.Source is GifImageSource)
             {
                 ((GifImageSource)img.Source).OnFrameChanged -= MainPage_OnFrameChanged;
                 ((GifImageSource)img.Source).OnFrameChanged += MainPage_OnFrameChanged;
             }
+            _progressBar.Value = 0;
             BusyIndicator.IsActive = false;
         }
 
         private void AnimationBehavior_OnError(object sender, string error)
         {
             Debug.WriteLine(error);
-       
+
             BusyIndicator.IsActive = false;
         }
 
@@ -63,15 +56,12 @@ namespace GifImageSample
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-            AnimationBehavior.OnError += AnimationBehavior_OnError;
-            AnimationBehavior.OnImageLoaded += AnimationBehavior_OnImageLoaded;
         }
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
+            AnimationBehavior.SetImageUriSource(_gifImage, null);
 
-            AnimationBehavior.OnError -= AnimationBehavior_OnError;
-            AnimationBehavior.OnImageLoaded -= AnimationBehavior_OnImageLoaded;
         }
         private void AppBarButtonLoad_Click(object sender, RoutedEventArgs e)
         {
@@ -123,9 +113,9 @@ namespace GifImageSample
 
         private void MainPage_OnFrameChanged(object sender)
         {
-           GifImageSource gifImage = (GifImageSource)sender;
+            GifImageSource gifImage = (GifImageSource)sender;
             _progressBar.Value = gifImage.CurrentFrame;
-            Debug.WriteLine("Changed frame to: "+gifImage.CurrentFrame);
+            //Debug.WriteLine("Changed frame to: "+gifImage.CurrentFrame);
             _progressBar.Maximum = gifImage.FrameCount;
         }
 
@@ -134,7 +124,20 @@ namespace GifImageSample
             List<MyModel> items = MyModel.CreateTestModels();
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
-            ClearCache();
+            AnimationBehavior.OnError += AnimationBehavior_OnError;
+            AnimationBehavior.OnImageLoaded += AnimationBehavior_OnImageLoaded;
         }
+
+        private void AppBarButtonOpenSingleEmoticonTest_Click(object sender, RoutedEventArgs e)
+        {
+            this.Frame.Navigate(typeof(SingleGifTest));
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            AnimationBehavior.OnError -= AnimationBehavior_OnError;
+            AnimationBehavior.OnImageLoaded -= AnimationBehavior_OnImageLoaded;
+        }
+
     }
 }

@@ -2,13 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>GifImageSource</id>
-        <version>1.1.0</version>
+        <version>1.1.1</version>
         <authors>Sverre Kristoffer Skodje</authors>
         <projectUrl>https://github.com/sskodje/GifImageSource</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>GifImageSource is a Windows Runtime Component for WinRT, Windows Phone 8 and Universal Windows projects, made for rendering GIF images in a resource efficient way using Direct2D</description>
-        <releaseNotes>1.10
-		- Added missing error handling when loading "ms-appx://" or "ms-appdata://" uris.
+        <releaseNotes>1.11
+		- Ensured that GifImageSource fallbacks to loading the source uri as BitmapImage on failure.
 		</releaseNotes>
 		<copyright>The MIT License (MIT)</copyright>
         <language>en-GB</language>

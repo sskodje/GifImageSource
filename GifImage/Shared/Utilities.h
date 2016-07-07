@@ -132,5 +132,10 @@ namespace Utilities
 		Windows::Storage::Streams::IBuffer^ buffHash1 = objHash->GetValueAndReset();
 		return Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(buffHash1);
 	}
+
+	 static bool IsLoaded(Windows::UI::Xaml::FrameworkElement^ element)
+	 {
+		 return Windows::UI::Xaml::Media::VisualTreeHelper::GetParent(element) != nullptr;
+	 }
 }
 
