@@ -120,12 +120,14 @@ namespace GifImageSample
                 OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
         }
-
+        DateTime _lastFrameChange;
         private void MainPage_OnFrameChanged(object sender)
         {
            GifImageSource gifImage = (GifImageSource)sender;
             _progressBar.Value = gifImage.CurrentFrame;
-            Debug.WriteLine("Changed frame to: "+gifImage.CurrentFrame);
+           var millis = DateTime.Now.Subtract(_lastFrameChange).TotalMilliseconds;
+            Debug.WriteLine(String.Format("Changed frame to: {0}. It took {1}ms.",gifImage.CurrentFrame,millis));
+            _lastFrameChange = DateTime.Now;
             _progressBar.Maximum = gifImage.FrameCount;
         }
 

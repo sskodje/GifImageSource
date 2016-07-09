@@ -6,7 +6,7 @@
       xmlns:i="using:Microsoft.Xaml.Interactivity"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      xmlns:Primitives="using:Telerik.UI.Xaml.Controls.Primitives"
+
       x:Class="GifImageSample.MainPage"
       mc:Ignorable="d"
       Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
