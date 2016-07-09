@@ -114,10 +114,10 @@ namespace GifImage
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
 		bool m_isCachingFrames;
-		bool m_isDestructing;
 		bool m_isRendering;
 		int m_windowID;
 		std::chrono::high_resolution_clock::time_point  m_nextFrameTimePoint;
+
 
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
 
@@ -130,6 +130,8 @@ namespace GifImage
 		concurrency::timer<int> *m_durationTimer;
 		Windows::Foundation::EventRegistrationToken m_RenderingToken;
 
+		concurrency::task<void> complete_after(unsigned int timeout);
+
 
 		/// <summary>
 		/// Renders a single frame and increments the current frame index.
@@ -138,7 +140,6 @@ namespace GifImage
 		void CreateDeviceResources(boolean forceRecreate);
 		HRESULT BeginDraw();
 		void EndDraw();
-		void WaitForAsync(Windows::Foundation::IAsyncAction ^A);
 		void CheckMemoryLimits();
 		void StartDurationTimer();
 		void StopDurationTimer();
@@ -153,7 +154,7 @@ namespace GifImage
 		concurrency::cancellation_token_source cancellationTokenSource;
 		void GetRawFramesTask(int startFrame, int endFrame);
 
-		void RenderAndPrepareFrame();
+		long RenderAndPrepareFrame();
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
 		HRESULT GetRawFrame(int uFrameIndex);

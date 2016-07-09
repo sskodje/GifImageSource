@@ -19,7 +19,7 @@ namespace Utilities
 			}
 			catch (...)
 			{
-				OutputDebugString(L"unknown error in delayed_ui_task");
+				OutputDebugString(L"unknown error in ui_task\r\n");
 			}
 		}, Platform::CallbackContext::Any));
 	}
@@ -137,5 +137,6 @@ namespace Utilities
 	 {
 		 return Windows::UI::Xaml::Media::VisualTreeHelper::GetParent(element) != nullptr;
 	 }
+
 }
 

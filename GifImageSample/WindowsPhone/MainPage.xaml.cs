@@ -71,6 +71,7 @@ namespace GifImageSample
         private void AppBarButtonUnload_Click(object sender, RoutedEventArgs e)
         {
             AnimationBehavior.SetImageUriSource(_gifImage, null);
+            //_gifImage.Source=null;
         }
 
         private void AppBarButtonPlay_Click(object sender, RoutedEventArgs e)

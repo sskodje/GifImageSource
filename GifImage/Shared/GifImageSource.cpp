@@ -5,7 +5,6 @@
 #include <Utilities.h>
 #include <comdef.h>
 #include <thread>
-//#include <chrono>
 
 using namespace std;
 using namespace std::chrono;
@@ -61,11 +60,7 @@ GifImageSource::GifImageSource(int width, int height, Platform::IBox<Windows::UI
 
 GifImageSource::~GifImageSource()
 {
-
-	if (m_isRendering)
-		StopAndClear();
-	else
-		ClearResources();
+	ClearResources();
 	OutputDebugString(L"Destructed GifImageSource\r\n");
 }
 
@@ -497,8 +492,8 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 			CreateStreamOverRandomAccessStream(
 				reinterpret_cast<IUnknown*>(pStream),
 				IID_PPV_ARGS(&pIStream)));
-		LoadImage(pIStream.Get());
 
+		LoadImage(pIStream.Get());
 	});
 }
 
@@ -884,19 +879,18 @@ void GifImageSource::Start()
 		{
 			Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
 		}
-		catch (...)
-		{
-
-		}
+		catch (...) {}
 	}
 	m_RenderingToken = Windows::UI::Xaml::Media::CompositionTarget::Rendering += ref new Windows::Foundation::EventHandler<Platform::Object ^>(this, &GifImage::GifImageSource::OnRendering);
+
+
 	StartDurationTimer();
 }
 
+
+
 void GifImageSource::StopAndClear()
 {
-	m_isDestructing = true;
-
 	cancellationTokenSource.cancel();
 	Utilities::ui_task(Dispatcher, [&]()
 	{
@@ -911,6 +905,7 @@ void GifImageSource::Pause()
 	{
 		Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
 	});
+
 }
 void GifImageSource::Stop()
 {
@@ -921,7 +916,7 @@ void GifImageSource::Stop()
 }
 
 ///Renders the current frame and sets up the timing for the next one.
-void GifImageSource::RenderAndPrepareFrame()
+long GifImageSource::RenderAndPrepareFrame()
 {
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
@@ -977,8 +972,9 @@ void GifImageSource::RenderAndPrepareFrame()
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(t2 - t1).count();
-	long delayTime = max(0, span - duration);
+	long delayTime =  max(0, span - duration);
 	m_nextFrameTimePoint = t2 + milliseconds(delayTime);
+	return delayTime;
 }
 
 void GifImageSource::CheckMemoryLimits()
@@ -1028,22 +1024,79 @@ void GifImageSource::OnSuspending(Object ^sender, Windows::ApplicationModel::Sus
 
 }
 
+task<void> GifImageSource::complete_after(unsigned int timeout)
+{
+	// A task completion event that is set when a timer fires.
+	task_completion_event<void> tce;
+
+	// Create a non-repeating timer.
+	auto fire_once = new timer<int>(timeout, 0, nullptr, false);
+	// Create a call object that sets the completion event after the timer fires.
+	auto callback = new call<int>([tce](int)
+	{
+		tce.set();
+	});
+
+	// Connect the timer to the callback and start the timer.
+	fire_once->link_target(callback);
+	fire_once->start();
+
+	// Create a task that completes after the completion event is set.
+	task<void> event_set(tce);
+
+	// Create a continuation task that cleans up resources and 
+	// and return that continuation task. 
+	return event_set.then([callback, fire_once]()
+	{
+		delete callback;
+		delete fire_once;
+	});
+}
+
 void GifImageSource::OnRendering(Platform::Object ^sender, Platform::Object ^args)
 {
 	if (m_isRendering)
 		return;
-	if (high_resolution_clock::now() < m_nextFrameTimePoint)
+
+	double  millisUntilNextTick = std::chrono::duration_cast<std::chrono::milliseconds>(m_nextFrameTimePoint.time_since_epoch()).count() - std::chrono::duration_cast<std::chrono::milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
+	//millisUntilNextTick = max(millisUntilNextTick, 0);
+	//if (high_resolution_clock::now() < m_nextFrameTimePoint)
+	if (millisUntilNextTick >0)
+	{
+		//OutputDebugString(("Returning, millis until next frame is: " + millisUntilNextTick + "\r\n")->Data());
 		return;
+	}
+	//if (millisUntilNextTick > 2)
+	//{
+	//	auto ui = task_continuation_context::use_current();
 
-	m_isRendering = true;
+	//	m_isRendering = true;
 
-	try
-	{
+	//	complete_after(millisUntilNextTick).then([this, ui]
+	//	{
+
+	//		try
+	//		{
+	//			//Utilities::ui_task(Dispatcher, [&]()
+	//			//{
+	//			double  millisUntilNextTick = std::chrono::duration_cast<std::chrono::milliseconds>(m_nextFrameTimePoint.time_since_epoch()).count() - std::chrono::duration_cast<std::chrono::milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
+
+	//			OutputDebugString(("Rendering after delay, millis since last frame is: " + millisUntilNextTick + "\r\n")->Data());
+	//			RenderAndPrepareFrame();
+	//			/*		});*/
+	//		}
+	//		catch (...)
+	//		{
+	//			StopAndClear();
+	//		}
+	//		m_isRendering = false;
+	//	}, ui);
+	//}
+	//else
+	//{
+
+		OutputDebugString(("Rendering, millis since last frame is: " + millisUntilNextTick + "\r\n")->Data());
 		RenderAndPrepareFrame();
-	}
-	catch (...)
-	{
-		StopAndClear();
-	}
-	m_isRendering = false;
+		m_isRendering = false;
+	/*}*/
 }

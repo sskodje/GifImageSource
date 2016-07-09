@@ -106,24 +106,24 @@ namespace GifImageSample
             {
                 try
                 {
-                    StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
-                    AnimationBehavior.SetImageStreamSource(_gifImage, await file.OpenReadAsync());
                     BusyIndicator.IsActive = true;
+                    StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
+                    await AnimationBehavior.SetImageStreamSource(_gifImage, await file.OpenReadAsync());
                 }
                 catch(IOException ex)
                 {
                     Debug.WriteLine(ex);
+                    BusyIndicator.IsActive = false;
                 }
             }
             else
             {
+                BusyIndicator.IsActive = true;
                 HttpClient client = new HttpClient();
                 byte[] data = await client.GetByteArrayAsync(uri);
                 IRandomAccessStream ras = data.AsBuffer().AsStream().AsRandomAccessStream();
-                AnimationBehavior.SetImageStreamSource(_gifImage, ras);
-                BusyIndicator.IsActive = true;
+                await AnimationBehavior.SetImageStreamSource(_gifImage, ras);
             }
-
         }
         private void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -151,7 +151,5 @@ namespace GifImageSample
         {
             this.Frame.Navigate(typeof(SingleGifTest));
         }
-
-
     }
 }
