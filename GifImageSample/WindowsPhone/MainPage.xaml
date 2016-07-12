@@ -6,11 +6,11 @@
       xmlns:i="using:Microsoft.Xaml.Interactivity"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-
       x:Class="GifImageSample.MainPage"
       mc:Ignorable="d"
       Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-      Loaded="Page_Loaded">
+      Loaded="Page_Loaded"
+      Unloaded="Page_Unloaded">
     <Page.BottomAppBar>
         <CommandBar>
 
@@ -21,6 +21,9 @@
                 <AppBarButton x:Name="AppBarButtonOpenGridViewTest"
                               Label="Open GridView test"
                               Click="AppBarButtonOpenGridViewTest_Click" />
+                <AppBarButton x:Name="AppBarButtonOpenSingleEmoticonTest"
+                              Label="Open single emoticon test"
+                              Click="AppBarButtonOpenSingleEmoticonTest_Click" />
             </CommandBar.SecondaryCommands>
 
             <AppBarButton x:Name="AppBarButtonLoad"
@@ -56,6 +59,7 @@
         <Viewbox Grid.Row="1"
                  StretchDirection="DownOnly">
             <Image x:Name="_gifImage"
+                   gs:AnimationBehavior.AutoStart="True"
                    Stretch="Uniform" />
         </Viewbox>
         <ProgressRing x:Name="BusyIndicator"

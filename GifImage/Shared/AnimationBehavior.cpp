@@ -144,12 +144,15 @@ void AnimationBehavior::SetImageUriSource(UIElement^ element, Uri^ value)
 void AnimationBehavior::s_imageUriChanged(DependencyObject^ d, DependencyPropertyChangedEventArgs^ args)
 {
 	Image^ image = (Image^)d;
-	Uri^ uriSource = dynamic_cast<Uri^>(args->NewValue);
-	if (uriSource == nullptr)
-		OutputDebugString(L"Set uri source on image: Null\r\n");
-	else
-		OutputDebugString(("Set uri source on image: " + uriSource->AbsoluteUri + "\r\n")->Data());
-	AnimationBehavior::InitAnimation(image, uriSource);
+	if (image != nullptr)
+	{
+		Uri^ uriSource = dynamic_cast<Uri^>(args->NewValue);
+		if (uriSource == nullptr)
+			OutputDebugString(("Set uri source on image " + image->GetHashCode() + ": Null\r\n")->Data());
+		else
+			OutputDebugString(("Set uri source on image " + image->GetHashCode() + ": " + uriSource->AbsoluteUri + "\r\n")->Data());
+		AnimationBehavior::InitAnimation(image, uriSource);
+	}
 }
 
 
@@ -157,7 +160,7 @@ DependencyProperty^ AnimationBehavior::s_imageStreamValueProperty = DependencyPr
 	"ImageStreamSource",
 	IRandomAccessStream::typeid,
 	AnimationBehavior::typeid,
-	ref new PropertyMetadata(nullptr, ref new PropertyChangedCallback(&AnimationBehavior::s_imageStreamChanged))
+	ref new PropertyMetadata(nullptr)
 	);
 
 IRandomAccessStream^ AnimationBehavior::GetImageStreamSource(UIElement^ element)
@@ -166,21 +169,18 @@ IRandomAccessStream^ AnimationBehavior::GetImageStreamSource(UIElement^ element)
 	return val;
 }
 
-void AnimationBehavior::SetImageStreamSource(UIElement^ element, IRandomAccessStream^ value)
+Windows::Foundation::IAsyncAction^ AnimationBehavior::SetImageStreamSource(UIElement^ element, IRandomAccessStream^ value)
 {
 	element->SetValue(s_imageStreamValueProperty, value);
-}
-void AnimationBehavior::s_imageStreamChanged(DependencyObject^ d, DependencyPropertyChangedEventArgs^ args)
-{
-	Image^ image = (Image^)d;
-	IRandomAccessStream^ streamSource = dynamic_cast<IRandomAccessStream^>(args->NewValue);
-	if (streamSource == nullptr)
+	Image^ image = (Image^)element;
+	if (value == nullptr)
 		OutputDebugString(L"Set stream source on image: Null\r\n");
 	else
 		OutputDebugString(L"Set stream source on image\r\n");
 
-	AnimationBehavior::InitAnimation(image, streamSource);
+	return AnimationBehavior::InitAnimation(image, value);
 }
+
 void GifImage::AnimationBehavior::s_repeatBehaviorChanged(DependencyObject ^ d, DependencyPropertyChangedEventArgs ^ args)
 {
 	Image^ image = (Image^)d;
@@ -205,38 +205,108 @@ GifImageSource^ AnimationBehavior::GetGifImageSource(UIElement^ element)
 	return nullptr;
 }
 
-void AnimationBehavior::InitAnimation(UIElement^ img, IRandomAccessStream^ streamSource)
+Windows::Foundation::IAsyncAction^ AnimationBehavior::InitAnimation(UIElement^ img, IRandomAccessStream^ streamSource)
 {
 	Image^ image = (Image^)img;
 	if (image == nullptr)
-		return;
+		return nullptr;
+
 	ClearImageSource(image);
-	if (streamSource != nullptr)
+
+	return create_async([streamSource, image]()
 	{
-		if (Windows::ApplicationModel::DesignMode::DesignModeEnabled)
+		std::shared_ptr<Concurrency::event> completed = std::make_shared<concurrency::event>();
+		 image->Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, ref new Windows::UI::Core::DispatchedHandler([streamSource,image,completed]()->void
 		{
-			BitmapImage^ bitmap = ref new BitmapImage();
-			bitmap->SetSourceAsync(streamSource);
-			image->Source = bitmap;
-			return;
-		}
-		auto loadStreamTask = GetGifImageSourceFromStream(image, streamSource);
-		loadStreamTask.then([image, streamSource](GifImageSource^ source)
-		{
-			if (source != nullptr)
+			auto ui = task_continuation_context::use_current();
+
+			if (streamSource != nullptr)
 			{
-				if (GetImageStreamSource(image) == streamSource)
+				if (Windows::ApplicationModel::DesignMode::DesignModeEnabled)
 				{
-					image->Source = source;
-					if (GetAutoStart(image) == true)
-						source->Start();
-					OnImageLoaded(image, source);
+					BitmapImage^ bitmap = ref new BitmapImage();
+					bitmap->SetSourceAsync(streamSource);
+					image->Source = bitmap;
+					completed->set();
+					return;
 				}
-				else
-					OutputDebugString(L"Cancelled GetGifImageSourceFromStream\r\n");
+				try
+				{
+				auto loadStreamTask = GetGifImageSourceFromStream(image, streamSource);
+				loadStreamTask.then([image, streamSource,completed, ui](GifImageSource^ gifImageSource)
+				{
+					if (gifImageSource != nullptr)
+					{
+						//Only load the source if the stream source is unchanged
+						if (GetImageStreamSource(image) == streamSource)
+						{
+							image->Source = gifImageSource;
+							if (GetAutoStart(image) == true)
+								gifImageSource->Start();
+							OnImageLoaded(image, gifImageSource);
+						}
+						else
+						{
+							OutputDebugString(L"Cancelled GetGifImageSourceFromStream because the source has changed\r\n");
+						}
+					}
+				},ui).then([image, streamSource,completed,ui](task<void> t)
+				{
+					bool success = false;
+					try
+					{
+						t.get();
+						success = true;
+					}
+					catch (Exception^ ex)
+					{
+						OutputDebugString(("GetGifImageSourceFromStream failed with error: " + ex->Message + "\r\n")->Data());
+						OnError(image, "GifImageSource load failed with error: " + ex->ToString());
+					}
+
+					if (!success)
+					{
+						try
+						{
+							if (GetImageStreamSource(image) == streamSource)
+							{
+								if (streamSource->CanRead)
+								{
+									streamSource->Seek(0);
+									BitmapImage^ bitmap = ref new BitmapImage();
+									image->Source = bitmap;
+									bitmap->SetSourceAsync(streamSource);
+								}
+							}
+						}
+						catch (Exception^ ex)
+						{
+							OutputDebugString(("Setting BitmapImage from stream failed with error: " + ex->Message + "\r\n")->Data());
+						}
+					}
+					completed->set();
+				},ui);
+			
+				}
+				catch (Exception^ ex)
+				{
+					if (streamSource != nullptr)
+					{
+						streamSource->Seek(0);
+						BitmapImage^ bitmap = ref new BitmapImage();
+						bitmap->SetSourceAsync(streamSource);
+						image->Source = bitmap;
+					}
+					Utilities::ui_task(image->Dispatcher, [image, streamSource, ex]() {
+
+						OnError(image, "GifImageSource load failed with error: " + ex->ToString());
+					});
+					completed->set();
+				}
 			}
-		});
-	}
+		}));
+		 completed->wait();
+	});
 }
 void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 {
@@ -249,6 +319,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 		image->Source = bitmap;
 		return;
 	}
+
 	ClearImageSource(image);
 	if (uriSource != nullptr)
 	{
@@ -256,10 +327,10 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 		{
 			auto getFileTask = create_task(StorageFile::GetFileFromApplicationUriAsync(uriSource));
 			auto ui = task_continuation_context::use_current();
-			getFileTask.then([uriSource, image,ui](StorageFile^ file)
+			getFileTask.then([uriSource, image, ui](StorageFile^ file)
 			{
 				LoadSourceFromStorageFile(image, file, uriSource);
-			},ui).then([image,ui](task<void> t)
+			}, ui).then([image, ui, uriSource](task<void> t)
 			{
 				try
 				{
@@ -267,16 +338,18 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 				}
 				catch (Exception^ ex)
 				{
+					image->Source = ref new BitmapImage(uriSource);
 					OnError(image, "GifImageSource load failed with error: " + ex->ToString());
 				}
-			},ui);
+
+			}, ui);
 		}
 		else if (uriSource->SchemeName == "http" || uriSource->SchemeName == "https")
 		{
 
 			auto getFileTask = AnimationBehavior::GetStorageFileForImageCache(uriSource);
 			auto ui = task_continuation_context::use_current();
-			getFileTask.then([uriSource, image,ui](StorageFile^ file)
+			getFileTask.then([uriSource, image, ui](StorageFile^ file)
 			{
 				if (GetImageUriSource(image) == uriSource)
 				{
@@ -334,7 +407,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 													.then([file, image, uriSource]()
 												{
 													LoadSourceFromStorageFile(image, file, uriSource);
-												}).then([file, image](task<void> t)
+												}).then([file, image, uriSource](task<void> t)
 												{
 													try
 													{
@@ -342,13 +415,15 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 													}
 													catch (Exception^ ex)
 													{
+														image->Source = ref new BitmapImage(uriSource);
+
 														OnError(image, "GifImageSource cache write failed with error: " + ex->ToString());
 													}
 													if (s_loadingImages->HasKey(file->Name))
 														s_loadingImages->Remove(file->Name);
 													OutputDebugString(("Removing from sync list: " + file->Name + "\r\n")->Data());
 												});
-											}).then([image](task<void> t)
+											}).then([image, uriSource](task<void> t)
 											{
 												try
 												{
@@ -356,11 +431,12 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 												}
 												catch (Exception^ ex)
 												{
+													image->Source = ref new BitmapImage(uriSource);
 													OnError(image, "GifImageSource stream read failed with error: " + ex->ToString());
 												}
 											});
 										}
-									}).then([file, image](task<void> t)
+									}).then([file, image, uriSource](task<void> t)
 									{
 										try
 										{
@@ -372,6 +448,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 											if (s_loadingImages->HasKey(file->Name))
 												s_loadingImages->Remove(file->Name);
 											file->DeleteAsync();
+											image->Source = ref new BitmapImage(uriSource);
 											OnError(image, "GifImageSource httpclient get failed with error: " + ex->ToString());
 										}
 									});
@@ -379,7 +456,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 								else
 									OutputDebugString(L"Cancelled CreateDownload\r\n");
 							}
-						}).then([image, ui](task<void> t)
+						}).then([image, ui, uriSource](task<void> t)
 						{
 							try
 							{
@@ -387,10 +464,11 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 							}
 							catch (Exception^ ex)
 							{
+								image->Source = ref new BitmapImage(uriSource);
 								OnError(image, "GifImageSource load failed with error: " + ex->ToString());
 							}
 						}, ui);
-					}, ui).then([image,ui](task<void> t)
+					}, ui).then([image, ui, uriSource](task<void> t)
 					{
 						try
 						{
@@ -398,13 +476,14 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 						}
 						catch (Exception^ ex)
 						{
+							image->Source = ref new BitmapImage(uriSource);
 							OnError(image, "GifImageSource load failed with error: " + ex->ToString());
 						}
-					},ui);
+					}, ui);
 				}
 				else
 					OutputDebugString(L"Cancelled GetBasicPropertiesAsync\r\n");
-			},ui).then([image,ui](task<void> t)
+			}, ui).then([image, ui, uriSource](task<void> t)
 			{
 				try
 				{
@@ -412,12 +491,16 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 				}
 				catch (Exception^ ex)
 				{
+					image->Source = ref new BitmapImage(uriSource);
 					OnError(image, "GifImageSource load failed with error: " + ex->ToString());
 				}
-			},ui);
+			}, ui);
 		}
 		else
+		{
+			image->Source = ref new BitmapImage(uriSource);
 			OnError(image, "Image URI is not in a valid format, Image Source was not set");
+		}
 	}
 }
 
@@ -447,14 +530,8 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 			{
 				src->StopAndClear();
 			}
-		}
-		catch (Exception^ ex)
-		{
 
-		}
 
-		try
-		{
 			auto token = GetImageUnloadedEventToken(image);
 			image->Unloaded -= token;
 		}
@@ -463,6 +540,7 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 
 		}
 	}
+
 	image->Source = nullptr;
 }
 
@@ -474,6 +552,7 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 	{
 		if (imageSource != nullptr)
 		{
+			//Only load the source if the url is unchanged
 			if (GetImageUriSource(image) == uriSource)
 			{
 				image->Source = imageSource;
@@ -481,14 +560,19 @@ void AnimationBehavior::LoadSourceFromStorageFile(UIElement^ element, IStorageFi
 				if (GetAutoStart(image) == true)
 					imageSource->Start();
 				OnImageLoaded(image, imageSource);
+
 				auto token = image->Unloaded += ref new Windows::UI::Xaml::RoutedEventHandler(&GifImage::AnimationBehavior::OnUnloaded);
 				SetImageUnloadedEventToken(image, token);
 			}
 			else
-				OutputDebugString(L"Cancelled LoadFromStorageFile\r\n");
+			{
+				OutputDebugString(L"Cancelled LoadFromStorageFile because the source has changed\r\n");
+			}
 		}
 		else
+		{
 			OnError(image, "Could not create GifImageSource, source was not set.");
+		}
 
 	}).then([image, uriSource](task<void> t)
 	{
@@ -560,7 +644,7 @@ concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStrea
 			IID_PPV_ARGS(&pIStream)));
 
 	auto pStream = pIStream.Get();
-	//stream = nullptr;
+
 	std::string str = Utilities::ReadStringFromStream(pStream, 3);
 	if (str != "GIF")
 		throw ref new InvalidArgumentException("File is not a valid GIF file");
@@ -574,6 +658,7 @@ concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStrea
 	int height = Utilities::ReadIntFromStream(pStream, 2);
 	IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior = nullptr;
 
+
 	try
 	{
 		repeatBehavior = GetRepeatBehavior(element);
@@ -585,17 +670,16 @@ concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStrea
 
 	GifImageSource^ imageSource = ref new GifImageSource(width, height, repeatBehavior);
 
+
 	auto setSourceTask = create_task(imageSource->SetSourceAsync(stream));
+
 	return	setSourceTask.then([imageSource]()->GifImageSource^
 	{
 		return imageSource;
 	});
 }
 
-bool AnimationBehavior::IsLoaded(FrameworkElement^ element)
-{
-	return Windows::UI::Xaml::Media::VisualTreeHelper::GetParent(element) != nullptr;
-}
+
 
 void AnimationBehavior::OnLoaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e)
 {
@@ -628,7 +712,7 @@ void AnimationBehavior::OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::
 	if (image != nullptr)
 	{
 		//If the image is still in the visual tree we need to back off.
-		if (IsLoaded(image))
+		if (Utilities::IsLoaded(image))
 			return;
 		if (image->Source != nullptr)
 		{
@@ -646,9 +730,8 @@ void AnimationBehavior::OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::
 				{
 
 				}
-
-				AnimationBehavior::ClearImageSource(image);
 			}
+			AnimationBehavior::ClearImageSource(image);
 			OutputDebugString(("Unloaded image" + " (" + image->GetHashCode() + ")" + " with source: " + GetImageUriSource(image)->AbsoluteUri + "\r\n")->Data());
 		}
 	}

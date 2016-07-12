@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Windows.ApplicationModel.Activation;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media.Animation;
@@ -35,6 +36,7 @@ namespace GifImageSample
                 rootFrame = new Frame();
                 rootFrame.CacheSize = 1;
                 Window.Current.Content = rootFrame;
+                ClearCache();
             }
 
             if (rootFrame.Content == null)
@@ -70,5 +72,15 @@ namespace GifImageSample
             rootFrame.Navigated -= RootFrame_FirstNavigated;
         }
 #endif
+
+    private async void ClearCache()
+    {
+        try
+        {
+            StorageFolder folder = await ApplicationData.Current.TemporaryFolder.GetFolderAsync("GifImageSource");
+            await folder.DeleteAsync();
+        }
+        catch { }
+    }
     }
 }

@@ -34,7 +34,7 @@ namespace GifImage
 			}
 		};
 		static  Windows::Storage::Streams::IRandomAccessStream^ GetImageStreamSource(Windows::UI::Xaml::UIElement^ element);
-		static void SetImageStreamSource(Windows::UI::Xaml::UIElement^ element, Windows::Storage::Streams::IRandomAccessStream^ value);
+		static Windows::Foundation::IAsyncAction^ SetImageStreamSource(Windows::UI::Xaml::UIElement^ element, Windows::Storage::Streams::IRandomAccessStream^ value);
 
 		static property Windows::UI::Xaml::DependencyProperty^ RepeatBehavior
 		{
@@ -94,12 +94,8 @@ namespace GifImage
 		static Windows::Foundation::EventRegistrationToken GetImageOpenedEventToken(Windows::UI::Xaml::UIElement^ element);
 		static void SetImageOpenedEventToken(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::EventRegistrationToken value);
 
-		/// <summary>
-		/// Returns true if the FrameworkElement is in the visual tree
-		/// </summary>
-		static bool IsLoaded(Windows::UI::Xaml::FrameworkElement^ element);
 		static void InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Foundation::Uri^ uriSource);
-		static void InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Storage::Streams::IRandomAccessStream^ streamSource);
+		static Windows::Foundation::IAsyncAction^ InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Storage::Streams::IRandomAccessStream^ streamSource);
 		static void ClearImageSource(Windows::UI::Xaml::UIElement^ element);
 
 

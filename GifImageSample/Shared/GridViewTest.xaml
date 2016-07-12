@@ -3,7 +3,6 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:local="using:GifImageSample"
       xmlns:gs="using:GifImage"
-      xmlns:gif="using:XamlAnimatedGif"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d">
@@ -25,12 +24,20 @@
 
             <GridView.ItemTemplate>
                 <DataTemplate>
-                    <Viewbox Height="60"
-                             Width="120"
-                             Stretch="Uniform"
-                             StretchDirection="DownOnly">
-                        <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}" />
-                    </Viewbox>
+                    <StackPanel>
+                        <Viewbox Height="60"
+                                 Width="120"
+                                 Stretch="Uniform"
+                                 StretchDirection="DownOnly">
+                            <Image x:Name="_gifImage"
+                                   gs:AnimationBehavior.ImageUriSource="{Binding Uri}" />
+
+                        </Viewbox>
+                        <!--<ProgressBar x:Name="_progressBar"
+                                     Maximum="{Binding ElementName=_gifImage, Path=Source.FrameCount}"
+                                     Value="{Binding ElementName=_gifImage, Path=Source.CurrentFrame}" />-->
+                    </StackPanel>
+
                 </DataTemplate>
             </GridView.ItemTemplate>
         </GridView>

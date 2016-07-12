@@ -1,0 +1,52 @@
+﻿<Page x:Class="GifImageSample.SingleGifTest"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="using:GifImageSample"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:gs="using:GifImage"
+      Loaded="Page_Loaded"
+      Unloaded="Page_Unloaded"
+      mc:Ignorable="d">
+    <Page.BottomAppBar>
+        <CommandBar>
+
+            <AppBarButton x:Name="AppBarButtonLoad"
+                          Icon="Download"
+                          Label="Load source"
+                          Click="AppBarButtonLoad_Click" />
+            <AppBarButton x:Name="AppBarButtonUnload"
+                          Icon="Cancel"
+                          Label="Unload source"
+                          Click="AppBarButtonUnload_Click" />
+            <AppBarButton x:Name="AppBarButtonPlay"
+                          Icon="Play"
+                          Label="Play"
+                          Click="AppBarButtonPlay_Click" />
+            <AppBarButton x:Name="AppBarButtonPause"
+                          Icon="Pause"
+                          Label="Pause"
+                          Click="AppBarButtonPause_Click" />
+
+        </CommandBar>
+    </Page.BottomAppBar>
+    <Grid Background="DimGray">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Button x:Name="navBackButton"
+                Height="60"
+                Width="60"
+                Visibility="Collapsed"
+                Click="navBackButton_Click">
+        </Button>
+        <!--<Image x:Name="_gifImage"
+               gs:AnimationBehavior.ImageUriSource="http://i.imgur.com/ZvSrgzm.gif"
+               gs:AnimationBehavior.AutoStart="True"
+               Grid.Row="1" />-->
+        <Image x:Name="_gifImage"
+               Grid.Row="1" />
+    </Grid>
+</Page>

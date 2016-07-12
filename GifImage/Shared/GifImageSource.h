@@ -3,17 +3,20 @@
 #include "windows.foundation.h"
 #include "Direct2DManager.h"
 #include <agents.h>
+#include <chrono>
 
 namespace GifImage
 {
 	public delegate void EventHandler(Platform::Object^ sender);
+
 	[Windows::Foundation::Metadata::WebHostHidden]
-	public ref class GifImageSource sealed : Windows::UI::Xaml::Media::Imaging::SurfaceImageSource
+	[Windows::UI::Xaml::Data::Bindable]
+	public ref class GifImageSource sealed : Windows::UI::Xaml::Media::Imaging::SurfaceImageSource, Windows::UI::Xaml::Data::INotifyPropertyChanged
 	{
 	public:
 		GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior);
 		virtual ~GifImageSource();
-
+		virtual event Windows::UI::Xaml::Data::PropertyChangedEventHandler^ PropertyChanged;
 		event EventHandler^ OnAnimationCompleted;
 		event EventHandler^ OnFrameChanged;
 
@@ -39,6 +42,10 @@ namespace GifImage
 		property int CurrentFrame
 		{
 			int get() { return m_dwCurrentFrame; }
+			void set(int value) {
+				m_dwCurrentFrame = value;
+				OnPropertyChanged("CurrentFrame");
+			}
 		}
 
 		/// <summary>
@@ -113,9 +120,10 @@ namespace GifImage
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
 		bool m_isCachingFrames;
-		bool m_isDestructing;
-		bool m_isRunningRenderTask;
+		bool m_isRenderingFrame;
+		bool m_isAnimating;
 		int m_windowID;
+		std::chrono::high_resolution_clock::time_point  m_nextFrameTimePoint;
 
 
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
@@ -127,7 +135,7 @@ namespace GifImage
 		std::vector<USHORT> m_disposals;
 
 		concurrency::timer<int> *m_durationTimer;
-		concurrency::timer<int> *m_memoryTimer;
+		Windows::Foundation::EventRegistrationToken m_RenderingToken;
 
 		/// <summary>
 		/// Renders a single frame and increments the current frame index.
@@ -136,14 +144,13 @@ namespace GifImage
 		void CreateDeviceResources(boolean forceRecreate);
 		HRESULT BeginDraw();
 		void EndDraw();
-		void WaitForAsync(Windows::Foundation::IAsyncAction ^A);
 		void CheckMemoryLimits();
 		void StartDurationTimer();
 		void StopDurationTimer();
 		long SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
-
+		void OnPropertyChanged(Platform::String^ propertyName);
 		void OnSuspending(Platform::Object ^sender, Windows::ApplicationModel::SuspendingEventArgs ^e);
 
 		HRESULT CopyCurrentFrameToBitmap();
@@ -151,9 +158,10 @@ namespace GifImage
 		concurrency::cancellation_token_source cancellationTokenSource;
 		void GetRawFramesTask(int startFrame, int endFrame);
 
-		void OnTick();
+		long RenderAndPrepareFrame();
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
 		HRESULT ReadGifApplicationExtension(IWICMetadataQueryReader *pQueryReader);
 		HRESULT GetRawFrame(int uFrameIndex);
+		void OnRendering(Platform::Object ^sender, Platform::Object ^args);
 	};
 }

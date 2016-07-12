@@ -98,35 +98,36 @@ void Direct2DManager::Recreate()
 
 Direct2DManager* Direct2DManager::GetInstance(int id)
 {
-		Direct2DManager* instance = nullptr;
-		for (int i = 0; i < m_instances.size(); i++)
+	Direct2DManager* instance = nullptr;
+	for (int i = 0; i < m_instances.size(); i++)
+	{
+		if (m_instances.at(i)->m_windowID == id)
 		{
-			if (m_instances.at(i)->m_windowID == id)
-			{
-				instance = m_instances.at(i);
-				return instance;
-			}
-		}
-		if (instance == nullptr)
-		{
-			auto instance = new Direct2DManager(id);
-			m_instances.push_back(instance);
+			instance = m_instances.at(i);
 			return instance;
 		}
-		return nullptr;
-
+	}
+	if (instance == nullptr)
+	{
+		auto instance = new Direct2DManager(id);
+		m_instances.push_back(instance);
+		return instance;
+	}
+	return nullptr;
 }
+
 void Direct2DManager::ReserveInstance(int id)
 {
 	for (int i = 0; i < m_instances.size(); i++)
 	{
 		auto instance = m_instances.at(i);
-		if (instance != nullptr && instance->m_windowID==id)
+		if (instance != nullptr && instance->m_windowID == id)
 		{
 			instance->m_clientCount++;
 		}
 	}
 }
+
 void Direct2DManager::ReturnInstance(int id)
 {
 	for (int i = 0; i < m_instances.size(); i++)
@@ -142,7 +143,7 @@ void Direct2DManager::ReturnInstance(int id)
 
 				instance->ClearDeviceResource();
 				m_instances[i] = nullptr;
-				m_instances.erase(m_instances.begin()+i);
+				m_instances.erase(m_instances.begin() + i);
 				delete instance;
 			}
 		}
