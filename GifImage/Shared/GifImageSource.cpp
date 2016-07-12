@@ -15,6 +15,7 @@ using namespace Microsoft::WRL;
 using namespace Windows::Storage::Streams;
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Core;
+using namespace Windows::UI::Xaml::Data;
 using namespace Windows::Foundation;
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage;
@@ -46,7 +47,7 @@ GifImageSource::GifImageSource(int width, int height, Platform::IBox<Windows::UI
 	m_bitsPerPixel(8),
 	m_canCacheMoreFrames(true),
 	m_haveReservedDeviceResources(false),
-	m_isRendering(false),
+	m_isRenderingFrame(false),
 	m_repeatBehavior(nullptr),
 	m_isAnimatedGif(false)
 {
@@ -65,6 +66,10 @@ GifImageSource::~GifImageSource()
 }
 
 
+void GifImageSource::OnPropertyChanged(String^ propertyName)
+{
+	PropertyChanged(this, ref new PropertyChangedEventArgs(propertyName));
+}
 
 void GifImageSource::ClearResources()
 {
@@ -88,10 +93,10 @@ bool GifImageSource::RenderFrame()
 		auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 		d2dContext->Clear();
 
-		if (m_bitmaps.at(m_dwCurrentFrame) != nullptr)
+		if (m_bitmaps.at(CurrentFrame) != nullptr)
 		{
 			m_pPreviousRawFrame = nullptr;
-			for (uint32 i = 0; i < m_dwCurrentFrame; i++)
+			for (uint32 i = 0; i < CurrentFrame; i++)
 			{
 				int disposal = m_disposals[i];
 				auto bitmap = m_bitmaps.at(i).Get();
@@ -99,7 +104,7 @@ bool GifImageSource::RenderFrame()
 				{
 					//Something has gone wrong, this should not happen. We reset to first frame and return true for loop complete.
 					EndDraw();
-					m_dwCurrentFrame = 0;
+					CurrentFrame = 0;
 					throw ref new NullReferenceException("frame cannot be null");
 				}
 				switch (disposal)
@@ -138,10 +143,10 @@ bool GifImageSource::RenderFrame()
 			}
 		}
 
-		hr = GetRawFrame(m_dwCurrentFrame);
+		hr = GetRawFrame(CurrentFrame);
 		if (hr == E_ABORT)
 		{
-			OutputDebugString(("Bitmap not decoded, delaying frame " + m_dwCurrentFrame + "\r\n")->Data());
+			OutputDebugString(("Bitmap not decoded, delaying frame " + CurrentFrame + "\r\n")->Data());
 			EndDraw();
 			return false;
 		}
@@ -151,16 +156,16 @@ bool GifImageSource::RenderFrame()
 			d2dContext->DrawImage(m_pPreviousRawFrame.Get());
 		}
 		//draw current frame on top
-		d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(m_dwCurrentFrame));
+		d2dContext->DrawImage(m_pRawFrame.Get(), m_offsets.at(CurrentFrame));
 		hr = d2dContext->Flush();
 
 
-		if (m_dwCurrentFrame + 1 < m_dwFrameCount&& m_bitmaps.at(m_dwCurrentFrame + 1) == nullptr)
+		if (CurrentFrame + 1 < m_dwFrameCount&& m_bitmaps.at(CurrentFrame + 1) == nullptr)
 		{
 			hr = CopyCurrentFrameToBitmap();
 		}
 		EndDraw();
-		m_realtimeBitmapBuffer[m_dwCurrentFrame] = nullptr;
+		m_realtimeBitmapBuffer[CurrentFrame] = nullptr;
 		SelectNextFrame();
 	}
 
@@ -169,7 +174,7 @@ bool GifImageSource::RenderFrame()
 		throw ref new Exception(hr);
 	}
 	// Returns true if we just completed a loop
-	return m_dwCurrentFrame == 0;
+	return CurrentFrame == 0;
 }
 
 
@@ -193,11 +198,11 @@ HRESULT GifImageSource::CopyCurrentFrameToBitmap()
 
 	if (m_pPreviousRawFrame != nullptr)
 		renderTarget->DrawBitmap(m_pPreviousRawFrame.Get());
-	else if (m_dwCurrentFrame > 0)
+	else if (CurrentFrame > 0)
 	{
 		//In this situation we have missing frames in the cache, so we have to draw each previous frame from 0 to m_dwCurrentFrame
 		//in order to make a complete base frame for this gif.
-		for (uint32 i = 0; i < m_dwCurrentFrame; i++)
+		for (uint32 i = 0; i < CurrentFrame; i++)
 		{
 			int disposal = m_disposals[i];
 			auto offset = m_offsets.at(i);
@@ -240,8 +245,8 @@ HRESULT GifImageSource::CopyCurrentFrameToBitmap()
 		}
 	}
 
-	int disposal = m_disposals[m_dwCurrentFrame];
-	auto offset = m_offsets.at(m_dwCurrentFrame);
+	int disposal = m_disposals[CurrentFrame];
+	auto offset = m_offsets.at(CurrentFrame);
 	auto rect = D2D1::RectF(
 		static_cast<float>(offset.x),
 		static_cast<float>(offset.y),
@@ -289,7 +294,7 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 {
 	bool startRenderTask = false;
 	int startIndex = 0;
-	for (int i = m_dwCurrentFrame; i < min(m_dwCurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount); i++)
+	for (int i = CurrentFrame; i < min(CurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount); i++)
 	{
 		if (m_bitmaps.at(i) != nullptr || m_realtimeBitmapBuffer.at(i) != nullptr)
 			continue;
@@ -446,21 +451,21 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 		pWicFrame = nullptr;
 		if (index + 1 == end)
 		{
-			int prevFrame = m_dwCurrentFrame;
+			int prevFrame = CurrentFrame;
 			for (int i = 0; i < 6; i++)
 			{
-				if (is_task_cancellation_requested() || m_delays.size() < m_dwCurrentFrame)
+				if (is_task_cancellation_requested() || m_delays.size() < CurrentFrame)
 				{
 					cancel_current_task();
 				}
-				long duration = m_delays.at(m_dwCurrentFrame) * 5;
+				long duration = m_delays.at(CurrentFrame) * 5;
 				wait(duration);
-				if (m_dwCurrentFrame != prevFrame)
+				if (CurrentFrame != prevFrame)
 					break;
 
 			}
 		}
-		end = min(m_dwCurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
+		end = min(CurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
 	}
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(t2 - t1).count();
@@ -471,7 +476,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 
 void GifImageSource::SelectNextFrame()
 {
-	m_dwCurrentFrame = (m_dwCurrentFrame + 1) % m_dwFrameCount;
+	CurrentFrame = (CurrentFrame + 1) % m_dwFrameCount;
 }
 
 
@@ -479,13 +484,13 @@ Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessS
 {
 	if (pStream == nullptr)
 		throw ref new Platform::InvalidArgumentException();
-
+	CurrentFrame = 0;
+	m_dwPreviousFrame = 0;
+	m_completedLoopCount = 0;
+	m_cachedKB = 0;
 	return create_async([this, pStream]() -> void
 	{
-		m_dwCurrentFrame = 0;
-		m_dwPreviousFrame = 0;
-		m_completedLoopCount = 0;
-		m_cachedKB = 0;
+
 
 		ComPtr<IStream> pIStream;
 		DX::ThrowIfFailed(
@@ -599,6 +604,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 	//render first frame
 	Utilities::ui_task(Dispatcher, [&]()
 	{
+		OnPropertyChanged("FrameCount");
 		RenderFrame();
 	});
 
@@ -831,7 +837,7 @@ void GifImageSource::StartDurationTimer()
 			Utilities::ui_task(Dispatcher, [this]()
 			{
 				Stop();
-				m_dwCurrentFrame = 0;
+				CurrentFrame = 0;
 				RenderFrame();
 			});
 		});
@@ -854,7 +860,7 @@ void GifImageSource::StopDurationTimer()
 
 long GifImageSource::SetNextInterval()
 {
-	auto delay = m_delays.at(m_dwCurrentFrame);
+	auto delay = m_delays.at(CurrentFrame);
 	if (delay < 2)
 	{
 		delay = 10; // default to 100ms if delay is too short
@@ -868,12 +874,16 @@ void GifImageSource::Start()
 
 	if (!m_isAnimatedGif)
 	{
-		m_dwCurrentFrame = 0;
+		CurrentFrame = 0;
 		RenderFrame();
 		return;
 	}
+	if (m_isAnimating)
+		return;
 
-	if (m_RenderingToken.Value>0)
+	m_isAnimating = true;
+	cancellationTokenSource = cancellation_token_source();
+	if (m_RenderingToken.Value > 0)
 	{
 		try
 		{
@@ -896,6 +906,7 @@ void GifImageSource::StopAndClear()
 	{
 		Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
 	});
+	m_isAnimating = false;
 	ClearResources();
 }
 
@@ -905,14 +916,16 @@ void GifImageSource::Pause()
 	{
 		Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
 	});
-
+	m_isAnimating = false;
 }
 void GifImageSource::Stop()
 {
 	Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
 	cancellationTokenSource.cancel();
-	m_dwCurrentFrame = 0;
+	CurrentFrame = 0;
+	m_isAnimating = false;
 	RenderFrame();
+
 }
 
 ///Renders the current frame and sets up the timing for the next one.
@@ -923,11 +936,11 @@ long GifImageSource::RenderAndPrepareFrame()
 
 	long span = SetNextInterval();
 
-	HRESULT hr = GetRawFrame(m_dwCurrentFrame);
+	HRESULT hr = GetRawFrame(CurrentFrame);
 
 	if (hr == E_ABORT)
 	{
-		OutputDebugString(("Bitmap not decoded, delaying frame " + m_dwCurrentFrame + "\r\n")->Data());
+		OutputDebugString(("Bitmap not decoded, delaying frame " + CurrentFrame + "\r\n")->Data());
 	}
 	else
 	{
@@ -961,18 +974,13 @@ long GifImageSource::RenderAndPrepareFrame()
 		}
 		catch (Exception^ ex)
 		{
-			for (int i = 0; i < m_dwFrameCount; i++)
-			{
-				m_bitmaps.at(i) = nullptr;
-			}
-			m_pRawFrame = nullptr;
-			throw;
+			StopAndClear();
 		}
 	}
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(t2 - t1).count();
-	long delayTime =  max(0, span - duration);
+	long delayTime = max(0, span - duration);
 	m_nextFrameTimePoint = t2 + milliseconds(delayTime);
 	return delayTime;
 }
@@ -989,7 +997,7 @@ void GifImageSource::CheckMemoryLimits()
 	{
 		if (percentUsed > MEMORY_PERCENT_TO_DELETE_FRAME_CACHE)
 		{
-			for (int i = m_dwCurrentFrame; i < m_dwFrameCount; i++)
+			for (int i = CurrentFrame; i < m_dwFrameCount; i++)
 			{
 				m_bitmaps.at(i) = nullptr;
 			}
@@ -1024,79 +1032,18 @@ void GifImageSource::OnSuspending(Object ^sender, Windows::ApplicationModel::Sus
 
 }
 
-task<void> GifImageSource::complete_after(unsigned int timeout)
-{
-	// A task completion event that is set when a timer fires.
-	task_completion_event<void> tce;
-
-	// Create a non-repeating timer.
-	auto fire_once = new timer<int>(timeout, 0, nullptr, false);
-	// Create a call object that sets the completion event after the timer fires.
-	auto callback = new call<int>([tce](int)
-	{
-		tce.set();
-	});
-
-	// Connect the timer to the callback and start the timer.
-	fire_once->link_target(callback);
-	fire_once->start();
-
-	// Create a task that completes after the completion event is set.
-	task<void> event_set(tce);
-
-	// Create a continuation task that cleans up resources and 
-	// and return that continuation task. 
-	return event_set.then([callback, fire_once]()
-	{
-		delete callback;
-		delete fire_once;
-	});
-}
 
 void GifImageSource::OnRendering(Platform::Object ^sender, Platform::Object ^args)
 {
-	if (m_isRendering)
+	if (m_isRenderingFrame)
 		return;
 
-	double  millisUntilNextTick = std::chrono::duration_cast<std::chrono::milliseconds>(m_nextFrameTimePoint.time_since_epoch()).count() - std::chrono::duration_cast<std::chrono::milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
-	//millisUntilNextTick = max(millisUntilNextTick, 0);
-	//if (high_resolution_clock::now() < m_nextFrameTimePoint)
-	if (millisUntilNextTick >0)
+	if (high_resolution_clock::now() < m_nextFrameTimePoint)
 	{
-		//OutputDebugString(("Returning, millis until next frame is: " + millisUntilNextTick + "\r\n")->Data());
 		return;
 	}
-	//if (millisUntilNextTick > 2)
-	//{
-	//	auto ui = task_continuation_context::use_current();
 
-	//	m_isRendering = true;
-
-	//	complete_after(millisUntilNextTick).then([this, ui]
-	//	{
-
-	//		try
-	//		{
-	//			//Utilities::ui_task(Dispatcher, [&]()
-	//			//{
-	//			double  millisUntilNextTick = std::chrono::duration_cast<std::chrono::milliseconds>(m_nextFrameTimePoint.time_since_epoch()).count() - std::chrono::duration_cast<std::chrono::milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
-
-	//			OutputDebugString(("Rendering after delay, millis since last frame is: " + millisUntilNextTick + "\r\n")->Data());
-	//			RenderAndPrepareFrame();
-	//			/*		});*/
-	//		}
-	//		catch (...)
-	//		{
-	//			StopAndClear();
-	//		}
-	//		m_isRendering = false;
-	//	}, ui);
-	//}
-	//else
-	//{
-
-		OutputDebugString(("Rendering, millis since last frame is: " + millisUntilNextTick + "\r\n")->Data());
-		RenderAndPrepareFrame();
-		m_isRendering = false;
-	/*}*/
+	m_isRenderingFrame = true;
+	RenderAndPrepareFrame();
+	m_isRenderingFrame = false;
 }

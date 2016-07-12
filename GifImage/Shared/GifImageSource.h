@@ -8,13 +8,15 @@
 namespace GifImage
 {
 	public delegate void EventHandler(Platform::Object^ sender);
+
 	[Windows::Foundation::Metadata::WebHostHidden]
-	public ref class GifImageSource sealed : Windows::UI::Xaml::Media::Imaging::SurfaceImageSource
+	[Windows::UI::Xaml::Data::Bindable]
+	public ref class GifImageSource sealed : Windows::UI::Xaml::Media::Imaging::SurfaceImageSource, Windows::UI::Xaml::Data::INotifyPropertyChanged
 	{
 	public:
 		GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior);
 		virtual ~GifImageSource();
-
+		virtual event Windows::UI::Xaml::Data::PropertyChangedEventHandler^ PropertyChanged;
 		event EventHandler^ OnAnimationCompleted;
 		event EventHandler^ OnFrameChanged;
 
@@ -40,6 +42,10 @@ namespace GifImage
 		property int CurrentFrame
 		{
 			int get() { return m_dwCurrentFrame; }
+			void set(int value) {
+				m_dwCurrentFrame = value;
+				OnPropertyChanged("CurrentFrame");
+			}
 		}
 
 		/// <summary>
@@ -114,7 +120,8 @@ namespace GifImage
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
 		bool m_isCachingFrames;
-		bool m_isRendering;
+		bool m_isRenderingFrame;
+		bool m_isAnimating;
 		int m_windowID;
 		std::chrono::high_resolution_clock::time_point  m_nextFrameTimePoint;
 
@@ -130,9 +137,6 @@ namespace GifImage
 		concurrency::timer<int> *m_durationTimer;
 		Windows::Foundation::EventRegistrationToken m_RenderingToken;
 
-		concurrency::task<void> complete_after(unsigned int timeout);
-
-
 		/// <summary>
 		/// Renders a single frame and increments the current frame index.
 		/// </summary>
@@ -146,7 +150,7 @@ namespace GifImage
 		long SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
-
+		void OnPropertyChanged(Platform::String^ propertyName);
 		void OnSuspending(Platform::Object ^sender, Windows::ApplicationModel::SuspendingEventArgs ^e);
 
 		HRESULT CopyCurrentFrameToBitmap();

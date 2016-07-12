@@ -56,10 +56,14 @@ namespace GifImageSample
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+            AnimationBehavior.OnError += AnimationBehavior_OnError;
+            AnimationBehavior.OnImageLoaded += AnimationBehavior_OnImageLoaded;
         }
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
+            AnimationBehavior.OnError -= AnimationBehavior_OnError;
+            AnimationBehavior.OnImageLoaded -= AnimationBehavior_OnImageLoaded;
             AnimationBehavior.SetImageUriSource(_gifImage, null);
 
         }
@@ -72,6 +76,7 @@ namespace GifImageSample
         {
             AnimationBehavior.SetImageUriSource(_gifImage, null);
             //_gifImage.Source=null;
+            _progressBar.Value=0;
         }
 
         private void AppBarButtonPlay_Click(object sender, RoutedEventArgs e)
@@ -111,12 +116,14 @@ namespace GifImageSample
                 OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
         }
-
+        DateTime _lastFrameChange;
         private void MainPage_OnFrameChanged(object sender)
         {
             GifImageSource gifImage = (GifImageSource)sender;
             _progressBar.Value = gifImage.CurrentFrame;
-            //Debug.WriteLine("Changed frame to: "+gifImage.CurrentFrame);
+            //var millis = DateTime.Now.Subtract(_lastFrameChange).TotalMilliseconds;
+            //Debug.WriteLine(String.Format("Changed frame to: {0}. It took {1}ms.", gifImage.CurrentFrame, millis));
+            //_lastFrameChange = DateTime.Now;
             _progressBar.Maximum = gifImage.FrameCount;
         }
 
@@ -125,8 +132,7 @@ namespace GifImageSample
             List<MyModel> items = MyModel.CreateTestModels();
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
-            AnimationBehavior.OnError += AnimationBehavior_OnError;
-            AnimationBehavior.OnImageLoaded += AnimationBehavior_OnImageLoaded;
+
         }
 
         private void AppBarButtonOpenSingleEmoticonTest_Click(object sender, RoutedEventArgs e)
@@ -136,8 +142,7 @@ namespace GifImageSample
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            AnimationBehavior.OnError -= AnimationBehavior_OnError;
-            AnimationBehavior.OnImageLoaded -= AnimationBehavior_OnImageLoaded;
+
         }
 
     }

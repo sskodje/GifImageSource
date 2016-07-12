@@ -4,7 +4,6 @@
       xmlns:local="using:GifImageSample"
       xmlns:gs="using:GifImage"
       xmlns:controls="using:GifImage"
-
       xmlns:core="using:Microsoft.Xaml.Interactions.Core"
       xmlns:i="using:Microsoft.Xaml.Interactivity"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -52,7 +51,8 @@
                             <Viewbox Height="100"
                                      Stretch="Uniform"
                                      StretchDirection="DownOnly">
-                                <Image gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
+                                <Image x:Name="_gifImage"
+                                       gs:AnimationBehavior.ImageUriSource="{Binding Uri}"
                                        gs:AnimationBehavior.AutoStart="True" />
                             </Viewbox>
                             <TextBlock Margin="5"

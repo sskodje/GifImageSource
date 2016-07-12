@@ -730,8 +730,6 @@ void AnimationBehavior::OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::
 				{
 
 				}
-
-
 			}
 			AnimationBehavior::ClearImageSource(image);
 			OutputDebugString(("Unloaded image" + " (" + image->GetHashCode() + ")" + " with source: " + GetImageUriSource(image)->AbsoluteUri + "\r\n")->Data());

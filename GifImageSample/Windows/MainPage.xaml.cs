@@ -84,6 +84,7 @@ namespace GifImageSample
             GifImageSource source = AnimationBehavior.GetGifImageSource(_gifImage);
             if (source != null)
                 source.Stop();
+            _progressBar.Value=0;
         }
         private void BnGridViewTest_Click(object sender, RoutedEventArgs e)
         {
