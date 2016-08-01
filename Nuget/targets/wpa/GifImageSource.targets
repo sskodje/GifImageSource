@@ -5,13 +5,13 @@
       <Name>Microsoft Visual C++ 2013 Runtime Package for Windows Phone</Name>
     </SDKReference>
   </ItemGroup>  
-  <Target Name="PlatformCheck" BeforeTargets="InjectReference"
+  <Target Name="PlatformCheck" BeforeTargets="InjectReference_GifImageSource"
     Condition=" ( ('$(Platform)' != 'x86') AND ('$(Platform)' != 'ARM'))">
     <Error  Text="$(MSBuildThisFileName) does not work correctly on '$(Platform)' 
                      platform. You need to specify platform (x86 or ARM)." />
   </Target>
 
-  <Target Name="InjectReference" BeforeTargets="ResolveAssemblyReferences">
+  <Target Name="InjectReference_GifImageSource" BeforeTargets="ResolveAssemblyReferences">
     <ItemGroup Condition=" '$(Platform)' == 'x86' or '$(Platform)' == 'ARM'">
       <Reference Include="GifImage">
         <HintPath>$(MSBuildThisFileDirectory)$(Platform)\GifImage.winmd</HintPath>

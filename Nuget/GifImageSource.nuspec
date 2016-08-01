@@ -2,16 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>GifImageSource</id>
-        <version>1.1.2</version>
+        <version>1.1.3</version>
         <authors>Sverre Kristoffer Skodje</authors>
         <projectUrl>https://github.com/sskodje/GifImageSource</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>GifImageSource is a Windows Runtime Component for WinRT, Windows Phone 8 and Universal Windows projects, made for rendering GIF images in a resource efficient way using Direct2D</description>
-        <releaseNotes>1.12
-		- Replaced render task with rendering in CompositionTarget::Rendering event to fix a memory leak problem.
-		- A quite substantial performance improvement of up to 25% reduction in CPU usage.
-		- Added data binding and INotifyPropertyChanged to CurrentFrame and FrameCount properties.
-		- Changed AnimationBehavior::SetImageStreamSource to an awaitable task.
+        <releaseNotes>1.13
+		- Repack of nuget package to fix a build a build issue that could occur when used with other Windows Runtime Component packages.
 		</releaseNotes>
 		<copyright>The MIT License (MIT)</copyright>
         <language>en-GB</language>

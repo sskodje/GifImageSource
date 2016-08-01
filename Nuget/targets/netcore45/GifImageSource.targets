@@ -5,13 +5,13 @@
       <Name>Microsoft Visual C++ 2013 Runtime Package for Windows</Name>
     </SDKReference>
   </ItemGroup>
-  <Target Name="PlatformCheck" BeforeTargets="InjectReference"
+  <Target Name="PlatformCheck" BeforeTargets="InjectReference_GifImageSource"
     Condition=" ( ('$(Platform)' != 'x86') AND ('$(Platform)' != 'ARM') AND  ('$(Platform)' != 'x64') )">
     <Error  Text="$(MSBuildThisFileName) does not work correctly on '$(Platform)' 
                      platform. You need to specify platform (x86 / x64 or ARM)." />
   </Target>
 
-  <Target Name="InjectReference" BeforeTargets="ResolveAssemblyReferences">
+  <Target Name="InjectReference_GifImageSource" BeforeTargets="ResolveAssemblyReferences">
 
     <ItemGroup Condition=" '$(Platform)' == 'x86' or '$(Platform)' == 'x64' or '$(Platform)' == 'ARM'">
       <Reference Include="GifImage">
