@@ -8,7 +8,7 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>GifImageSource is a Windows Runtime Component for WinRT, Windows Phone 8 and Universal Windows projects, made for rendering GIF images in a resource efficient way using Direct2D</description>
         <releaseNotes>1.14
-		- Fixed an issue causing gifs to under some situations fail and unload when the app is suspended
+		- Fixed an issue that can cause gifs to fail and unload when the app is suspended
 		</releaseNotes>
 		<copyright>The MIT License (MIT)</copyright>
         <language>en-GB</language>
