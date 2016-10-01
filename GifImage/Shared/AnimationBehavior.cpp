@@ -499,7 +499,7 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 		else
 		{
 			image->Source = ref new BitmapImage(uriSource);
-			OnError(image, "Image URI is not in a valid format, Image Source was not set");
+			OnError(image, "Image URI is not in a valid format.");
 		}
 	}
 }

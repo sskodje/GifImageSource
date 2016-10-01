@@ -169,10 +169,6 @@ bool GifImageSource::RenderFrame()
 		SelectNextFrame();
 	}
 
-	if (FAILED(hr))//Rendering failed. We stop the GIF render thread to avoid a potential app crash.
-	{
-		throw ref new Exception(hr);
-	}
 	// Returns true if we just completed a loop
 	return CurrentFrame == 0;
 }
