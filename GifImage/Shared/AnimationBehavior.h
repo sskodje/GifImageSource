@@ -15,8 +15,30 @@ namespace GifImage
 	public:
 		AnimationBehavior();
 		virtual~AnimationBehavior();
+	
+		static property Windows::Web::Http::HttpClient^ DefaultHttpClient
+		{
+			Windows::Web::Http::HttpClient^ get()
+			{
+				return s_defaultHttpClient;
+			}
+			void set(Windows::Web::Http::HttpClient^ value)
+			{
+				s_defaultHttpClient = value;
+			}
+		}
 
-		static property Windows::UI::Xaml::DependencyProperty^ ImageUri
+		static property Windows::UI::Xaml::DependencyProperty^ CustomHttpClientProperty
+		{
+			Windows::UI::Xaml::DependencyProperty^ get()
+			{
+				return s_httpClientValueProperty;
+			}
+		};
+		static Windows::Web::Http::HttpClient^ GetHttpClient(Windows::UI::Xaml::UIElement^ element);
+		static void SetHttpClient(Windows::UI::Xaml::UIElement^ element, Windows::Web::Http::HttpClient^ value);
+
+		static property Windows::UI::Xaml::DependencyProperty^ ImageUriProperty
 		{
 			Windows::UI::Xaml::DependencyProperty^ get()
 			{
@@ -25,8 +47,9 @@ namespace GifImage
 		};
 		static Windows::Foundation::Uri^ GetImageUriSource(Windows::UI::Xaml::UIElement^ element);
 		static void SetImageUriSource(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::Uri^ value);
+		static void SetImageUriSource(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::Uri^ value,Windows::Web::Http::HttpClient^ client);
 
-		static property Windows::UI::Xaml::DependencyProperty^ ImageStream
+		static property Windows::UI::Xaml::DependencyProperty^ ImageStreamProperty
 		{
 			Windows::UI::Xaml::DependencyProperty^ get()
 			{
@@ -36,7 +59,7 @@ namespace GifImage
 		static  Windows::Storage::Streams::IRandomAccessStream^ GetImageStreamSource(Windows::UI::Xaml::UIElement^ element);
 		static Windows::Foundation::IAsyncAction^ SetImageStreamSource(Windows::UI::Xaml::UIElement^ element, Windows::Storage::Streams::IRandomAccessStream^ value);
 
-		static property Windows::UI::Xaml::DependencyProperty^ RepeatBehavior
+		static property Windows::UI::Xaml::DependencyProperty^ RepeatBehaviorProperty
 		{
 			Windows::UI::Xaml::DependencyProperty^ get()
 			{
@@ -47,7 +70,7 @@ namespace GifImage
 		static Windows::UI::Xaml::Media::Animation::RepeatBehavior  GetRepeatBehavior(Windows::UI::Xaml::UIElement^ element);
 		static void SetRepeatBehavior(Windows::UI::Xaml::UIElement^ element, Windows::UI::Xaml::Media::Animation::RepeatBehavior value);
 
-		static property Windows::UI::Xaml::DependencyProperty^ AutoStart
+		static property Windows::UI::Xaml::DependencyProperty^ AutoStartProperty
 		{
 			Windows::UI::Xaml::DependencyProperty^ get()
 			{
@@ -65,10 +88,17 @@ namespace GifImage
 		static event ImageLoadedEventHandler^ OnImageLoaded;
 		static event ErrorEventHandler^ OnError;
 
+		
+
 	private:
+		static int MyInt;
 		static void s_imageUriChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
 		static void s_imageStreamChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
 		static void s_repeatBehaviorChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
+
+		static Windows::Web::Http::HttpClient^ s_defaultHttpClient;
+
+		static Windows::UI::Xaml::DependencyProperty^ s_httpClientValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageUriValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageStreamValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageLoadedEventTokenProperty;

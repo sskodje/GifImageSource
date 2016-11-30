@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
+
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Storage;
@@ -13,6 +13,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Windows.Web.Http;
 
 namespace GifImageSample
 {
@@ -40,7 +41,6 @@ namespace GifImageSample
         {
             GifImageSource gifImage = (GifImageSource)sender;
             _progressBar.Value = gifImage.CurrentFrame;
-            //Debug.WriteLine("Changed frame to: "+gifImage.CurrentFrame);
             _progressBar.Maximum = gifImage.FrameCount;
         }
 
@@ -121,8 +121,7 @@ namespace GifImageSample
             {
                 BusyIndicator.IsActive = true;
                 HttpClient client = new HttpClient();
-                byte[] data = await client.GetByteArrayAsync(uri);
-                IRandomAccessStream ras = data.AsBuffer().AsStream().AsRandomAccessStream();
+                var ras = (await client.GetInputStreamAsync(uri)).AsStreamForRead().AsRandomAccessStream();
                 await AnimationBehavior.SetImageStreamSource(_gifImage, ras);
             }
         }

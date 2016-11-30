@@ -9,6 +9,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Windows.Web.Http;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkID=390556
 
@@ -23,7 +24,10 @@ namespace GifImageSample
         {
 
             this.InitializeComponent();
-
+            var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new Windows.Web.Http.Headers.HttpCredentialsHeaderValue("Bearer", "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1laWQiOiIxIiwidW5pcXVlX25hbWUiOiJBdXN0aW5ubm5ubm5tbW1tbW1tbW1tbW1tbW1tbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vYWNjZXNzY29udHJvbHNlcnZpY2UvMjAxMC8wNy9jbGFpbXMvaWRlbnRpdHlwcm92aWRlciI6IkFTUC5ORVQgSWRlbnRpdHkiLCJBc3BOZXQuSWRlbnRpdHkuU2VjdXJpdHlTdGFtcCI6IjBkOGQ3Y2FkLTBhNjUtNDBiMC04Y2ZkLTZhZjNiOTY3YmI3YyIsImVtYWlsIjoic3Nrb2RqZUBnbWFpbC5jb20iLCJpc3MiOiJodHRwOi8vaml2ZW1lc3Nlbmdlci5jb20iLCJhdWQiOiJodHRwOi8vaml2ZW1lc3Nlbmdlci5jb20vYXBpLyIsImV4cCI6MTQ3OTE0ODQ4OCwibmJmIjoxNDc5MDYyMDg4fQ.NGJZh_o-L9RpDSrI-2S1gdySwWQ6Djwfx-lxo9imZJE");
+          AnimationBehavior.DefaultHttpClient = client;
+            
             this.DataContext = this;
         }
 
@@ -75,7 +79,6 @@ namespace GifImageSample
         private void AppBarButtonUnload_Click(object sender, RoutedEventArgs e)
         {
             AnimationBehavior.SetImageUriSource(_gifImage, null);
-            //_gifImage.Source=null;
             _progressBar.Value=0;
         }
 
@@ -105,6 +108,7 @@ namespace GifImageSample
 
         private void OpenGif(Uri uri)
         {
+
             AnimationBehavior.SetImageUriSource(_gifImage, uri);
             BusyIndicator.IsActive = true;
         }
@@ -121,9 +125,6 @@ namespace GifImageSample
         {
             GifImageSource gifImage = (GifImageSource)sender;
             _progressBar.Value = gifImage.CurrentFrame;
-            //var millis = DateTime.Now.Subtract(_lastFrameChange).TotalMilliseconds;
-            //Debug.WriteLine(String.Format("Changed frame to: {0}. It took {1}ms.", gifImage.CurrentFrame, millis));
-            //_lastFrameChange = DateTime.Now;
             _progressBar.Maximum = gifImage.FrameCount;
         }
 
