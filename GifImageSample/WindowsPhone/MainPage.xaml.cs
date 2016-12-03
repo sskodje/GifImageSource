@@ -24,8 +24,10 @@ namespace GifImageSample
         {
 
             this.InitializeComponent();
+
+            //This is an example on setting a global default HttpClient with an auth token, if you use the library with a service that requires it.
             var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new Windows.Web.Http.Headers.HttpCredentialsHeaderValue("Bearer", "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1laWQiOiIxIiwidW5pcXVlX25hbWUiOiJBdXN0aW5ubm5ubm5tbW1tbW1tbW1tbW1tbW1tbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vYWNjZXNzY29udHJvbHNlcnZpY2UvMjAxMC8wNy9jbGFpbXMvaWRlbnRpdHlwcm92aWRlciI6IkFTUC5ORVQgSWRlbnRpdHkiLCJBc3BOZXQuSWRlbnRpdHkuU2VjdXJpdHlTdGFtcCI6IjBkOGQ3Y2FkLTBhNjUtNDBiMC04Y2ZkLTZhZjNiOTY3YmI3YyIsImVtYWlsIjoic3Nrb2RqZUBnbWFpbC5jb20iLCJpc3MiOiJodHRwOi8vaml2ZW1lc3Nlbmdlci5jb20iLCJhdWQiOiJodHRwOi8vaml2ZW1lc3Nlbmdlci5jb20vYXBpLyIsImV4cCI6MTQ3OTE0ODQ4OCwibmJmIjoxNDc5MDYyMDg4fQ.NGJZh_o-L9RpDSrI-2S1gdySwWQ6Djwfx-lxo9imZJE");
+            client.DefaultRequestHeaders.Authorization = new Windows.Web.Http.Headers.HttpCredentialsHeaderValue("Bearer", "eyJ0eXAiOiJKV1Q(..rest of your token here)");
           AnimationBehavior.DefaultHttpClient = client;
             
             this.DataContext = this;
