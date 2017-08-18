@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "AnimationBehavior.h"
 #include "Robuffer.h"
-#include "Utilities.h";
+#include "Utilities.h"
 
 using namespace GifImage;
 using namespace Windows::UI::Core;
@@ -31,8 +31,6 @@ AnimationBehavior::AnimationBehavior()
 AnimationBehavior::~AnimationBehavior()
 {
 }
-
-
 #pragma region Dependency Properties
 
 

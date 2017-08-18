@@ -30,6 +30,10 @@ namespace GifImageSample
     /// </summary>
     public sealed partial class ListViewTest : Page, INotifyPropertyChanged
     {
+#if WINDOWS_APP
+        private DispatcherTimer _scrollResumeTimer = new DispatcherTimer();
+#endif
+
         private ObservableCollection<MyModel> _items;
         public ObservableCollection<MyModel> Items
         {
@@ -44,6 +48,21 @@ namespace GifImageSample
             }
         }
 
+        private bool _isPausedWhileScrolling;
+        public bool IsPausedWhileScrolling
+        {
+            get { return _isPausedWhileScrolling; }
+            set
+            {
+                if (_isPausedWhileScrolling != value)
+                {
+                    _isPausedWhileScrolling = value;
+                    RaisePropertyChanged("IsPausedWhileScrolling");
+                }
+            }
+        }
+
+
         public ListViewTest()
         {
             this.DataContext = this;
@@ -52,9 +71,43 @@ namespace GifImageSample
 #if WINDOWS_APP
             this.navBackButton.Style = (Style)Resources["NavigationBackButtonNormalStyle"];
             this.navBackButton.Visibility = Windows.UI.Xaml.Visibility.Visible;
+            _scrollResumeTimer.Interval = TimeSpan.FromMilliseconds(500);
+            _scrollResumeTimer.Tick += (s, args) =>
+            {
+                _scrollResumeTimer.Stop();
+                GifImageSource.ResumeAllGifs();
+            };
 #elif WINDOWS_PHONE_APP
             HardwareButtons.BackPressed += HardwareButtons_BackPressed;
 #endif
+
+        }
+
+
+
+        private void Sc_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+        {
+            if (IsPausedWhileScrolling)
+            {
+
+#if WINDOWS_APP
+                _scrollResumeTimer.Stop();
+                _scrollResumeTimer.Start();
+                GifImageSource.PauseAllGifs();
+#else
+                if (e.IsIntermediate)
+                {
+
+                    GifImageSource.PauseAllGifs();
+                }
+                else
+                {
+
+                    //scroll is stopping
+                    GifImageSource.ResumeAllGifs();
+                }
+#endif
+            }
         }
 
 
@@ -97,7 +150,7 @@ namespace GifImageSample
 
         private void bnAddItems_Click(object sender, RoutedEventArgs e)
         {
-            foreach(MyModel model in Enumerable.Range(0, 150).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList())
+            foreach (MyModel model in Enumerable.Range(0, 150).Select(x => new MyModel(MyModel.GetSampleUriFromIndex(x))).ToList())
             {
                 Items.Add(model);
             }
@@ -107,6 +160,24 @@ namespace GifImageSample
         {
             if (Frame.CanGoBack)
                 Frame.GoBack();
+        }
+
+        private void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            ScrollViewer sc = this.listViewTest.GetFirstDescendantOfType<ScrollViewer>();
+            if (sc != null)
+            {
+                sc.ViewChanged += Sc_ViewChanged;
+            }
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            ScrollViewer sc = this.listViewTest.GetFirstDescendantOfType<ScrollViewer>();
+            if (sc != null)
+            {
+                sc.ViewChanged -= Sc_ViewChanged;
+            }
         }
     }
 }

@@ -122,7 +122,7 @@ namespace GifImageSample
                 OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
         }
-        DateTime _lastFrameChange;
+
         private void MainPage_OnFrameChanged(object sender)
         {
             GifImageSource gifImage = (GifImageSource)sender;

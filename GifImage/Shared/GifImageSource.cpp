@@ -3,8 +3,6 @@
 #include <shcore.h>
 #include <GifImageSource.h>
 #include <Utilities.h>
-#include <comdef.h>
-#include <thread>
 
 using namespace std;
 using namespace std::chrono;
@@ -21,6 +19,8 @@ using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage;
 using namespace Windows::Networking::BackgroundTransfer;
 using namespace Windows::UI::Xaml::Media::Animation;
+
+bool GifImageSource::s_isAllAnimationsPaused;
 
 template <typename T>
 inline void SafeRelease(T *&pI)
@@ -125,7 +125,7 @@ bool GifImageSource::RenderFrame()
 							static_cast<float>(offset.y),
 							static_cast<float>(offset.x + bitmap->GetPixelSize().width),
 							static_cast<float>(offset.y + bitmap->GetPixelSize().height)
-							),
+						),
 						D2D1_ANTIALIAS_MODE_ALIASED);
 
 
@@ -213,7 +213,7 @@ HRESULT GifImageSource::CopyCurrentFrameToBitmap()
 				static_cast<float>(offset.y),
 				static_cast<float>(offset.x + bitmap->GetSize().width),
 				static_cast<float>(offset.y + bitmap->GetSize().height)
-				);
+			);
 			switch (disposal)
 			{
 			case DISPOSAL_UNSPECIFIED:
@@ -248,7 +248,7 @@ HRESULT GifImageSource::CopyCurrentFrameToBitmap()
 		static_cast<float>(offset.y),
 		static_cast<float>(offset.x + m_pRawFrame->GetSize().width),
 		static_cast<float>(offset.y + m_pRawFrame->GetSize().height)
-		);
+	);
 
 	switch (disposal)
 	{
@@ -288,23 +288,27 @@ HRESULT GifImageSource::CopyCurrentFrameToBitmap()
 //Sets the value of m_pRawFrame for the current frame index, and starts the GetRawFramesTask if necessary.
 HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 {
-	bool startRenderTask = false;
+	bool startPreRenderTask = false;
 	int startIndex = 0;
-	for (int i = CurrentFrame; i < min(CurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount); i++)
-	{
-		if (m_bitmaps.at(i) != nullptr || m_realtimeBitmapBuffer.at(i) != nullptr)
-			continue;
-		startIndex = i;
-		startRenderTask = true;
-		break;
+	if (!s_isAllAnimationsPaused) {
+
+		for (int i = CurrentFrame; i < min(CurrentFrame + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount); i++)
+		{
+			if (m_bitmaps.at(i) != nullptr || m_realtimeBitmapBuffer.at(i) != nullptr)
+				continue;
+			startIndex = i;
+			startPreRenderTask = true;
+			break;
+		}
 	}
-	if (!m_isCachingFrames &&startRenderTask)
+	if (!m_isCachingFrames && startPreRenderTask)
 	{
 		m_isCachingFrames = true;
 		int startFrame = startIndex;
 		int framecount = m_dwFrameCount;
 		int endFrame = min(startIndex + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
 		auto token = cancellationTokenSource.get_token();
+		OutputDebugString(("Starting GetRawFramesTask for frame " + startFrame + " to " + endFrame + ".\r\n")->Data());
 		create_task([this, startFrame, endFrame]() {GetRawFramesTask(startFrame, endFrame); }, token)
 			.then([&](task<void> t)
 		{
@@ -434,7 +438,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 			&& index < MAX_CACHED_FRAMES_PER_GIF
 			&& (index == 0 || m_bitmaps.at(index - 1) != nullptr))
 		{
-			if (m_bitmaps.size()>index)
+			if (m_bitmaps.size() > index)
 				m_bitmaps[index] = pRawFrame;
 		}
 		else
@@ -531,10 +535,13 @@ void GifImageSource::LoadImage(IStream *pStream)
 	int maxBytesToCache = 1000000;
 	//The frame size for this gif in bytes
 	double frameSizeBytes = (m_width*m_height)*(m_bitsPerPixel) / 8;
-	double frameCountToPreload = maxBytesToCache / frameSizeBytes;
-	frameCountToPreload = max(FRAMECOUNT_TO_PRERENDER, (int)frameCountToPreload);//make sure to always prerender enough frames to don't start the the prerender thread on first frame render.
-	frameCountToPreload = min(MAX_CACHED_FRAMES_PER_GIF, (int)frameCountToPreload);//make sure to not exceed MAX_CACHED_FRAMES_PER_GIF count.
-
+	double frameCountToPreload = 1;
+	//If the gifs are globally paused, only preload first frame to avoid wasting resources in a scenario where the GIF might never play.
+	if (!s_isAllAnimationsPaused) {
+		frameCountToPreload = maxBytesToCache / frameSizeBytes;
+		frameCountToPreload = max(FRAMECOUNT_TO_PRERENDER, (int)frameCountToPreload);//make sure to always prerender enough frames to don't start the the prerender thread on first frame render.
+		frameCountToPreload = min(MAX_CACHED_FRAMES_PER_GIF, (int)frameCountToPreload);//make sure to not exceed MAX_CACHED_FRAMES_PER_GIF count.
+	}
 	OutputDebugString(("frames to preload: " + frameCountToPreload + "\r\n")->Data());
 	//	 Get and convert each frame bitmap into ID2D1Bitmap
 	for (UINT dwFrameIndex = 0; dwFrameIndex < dwFrameCount; dwFrameIndex++)
@@ -731,7 +738,7 @@ void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 	Microsoft::WRL::ComPtr<ISurfaceImageSourceNative> sisNative;
 	DX::ThrowIfFailed(
 		reinterpret_cast<IUnknown*>(this)->QueryInterface(IID_PPV_ARGS(&sisNative))
-		);
+	);
 
 	// Associate the DXGI device with the SurfaceImageSource. 
 	DX::ThrowIfFailed(
@@ -748,7 +755,7 @@ HRESULT GifImageSource::BeginDraw()
 	Microsoft::WRL::ComPtr<ISurfaceImageSourceNative> sisNative;
 	DX::ThrowIfFailed(
 		reinterpret_cast<IUnknown*>(this)->QueryInterface(IID_PPV_ARGS(&sisNative))
-		);
+	);
 	ComPtr<IDXGISurface> surface;
 	// Begin drawing - returns a target surface and an offset to use as the top left origin when drawing. 
 	HRESULT beginDrawHR = sisNative->BeginDraw(updateRect, &surface, &offset);
@@ -778,7 +785,7 @@ HRESULT GifImageSource::BeginDraw()
 				static_cast<float>(offset.y),
 				static_cast<float>(offset.x + updateRect.right),
 				static_cast<float>(offset.y + updateRect.bottom)
-				),
+			),
 			D2D1_ANTIALIAS_MODE_ALIASED);
 
 		d2dContext->SetTransform(
@@ -811,7 +818,7 @@ void GifImageSource::EndDraw()
 	Microsoft::WRL::ComPtr<ISurfaceImageSourceNative> sisNative;
 	DX::ThrowIfFailed(
 		reinterpret_cast<IUnknown*>(this)->QueryInterface(IID_PPV_ARGS(&sisNative))
-		);
+	);
 
 	DX::ThrowIfFailed(sisNative->EndDraw());
 }
@@ -924,6 +931,16 @@ void GifImageSource::Stop()
 
 }
 
+void GifImageSource::PauseAllGifs()
+{
+	s_isAllAnimationsPaused = true;
+}
+
+void GifImageSource::ResumeAllGifs()
+{
+	s_isAllAnimationsPaused = false;
+}
+
 ///Renders the current frame and sets up the timing for the next one.
 long GifImageSource::RenderAndPrepareFrame()
 {
@@ -946,7 +963,6 @@ long GifImageSource::RenderAndPrepareFrame()
 			OnFrameChanged(this);
 			if (completedLoop)
 			{
-
 				m_completedLoopCount++;
 				m_pPreviousRawFrame = nullptr;
 
@@ -966,7 +982,6 @@ long GifImageSource::RenderAndPrepareFrame()
 					}
 				}
 			}
-
 		}
 		catch (Exception^ ex)
 		{
@@ -1031,13 +1046,8 @@ void GifImageSource::OnSuspending(Object ^sender, Windows::ApplicationModel::Sus
 
 void GifImageSource::OnRendering(Platform::Object ^sender, Platform::Object ^args)
 {
-	if (m_isRenderingFrame)
+	if (m_isRenderingFrame || s_isAllAnimationsPaused || high_resolution_clock::now() < m_nextFrameTimePoint)
 		return;
-
-	if (high_resolution_clock::now() < m_nextFrameTimePoint)
-	{
-		return;
-	}
 
 	m_isRenderingFrame = true;
 	RenderAndPrepareFrame();

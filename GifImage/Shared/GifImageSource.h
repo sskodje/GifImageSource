@@ -72,6 +72,10 @@ namespace GifImage
 		void Stop();
 
 
+		static void PauseAllGifs();
+
+		static void ResumeAllGifs();
+
 		/// <summary>
 		/// Loads the image from the specified image stream.
 		/// </summary>
@@ -91,7 +95,7 @@ namespace GifImage
 	private:
 #define DISPOSAL_UNSPECIFIED      0       /* No disposal specified. */
 #define DISPOSE_DO_NOT            1       /* Leave image in place */
-#define DISPOSE_BACKGROUND        2       /* Set area too background color */
+#define DISPOSE_BACKGROUND        2       /* Set area to background color */
 #define DISPOSE_PREVIOUS          3       /* Restore to previous content */
 
 #define MAX_MEMORY_KILOBYTES_PER_GIF	10240	/* We allocated a max of 10 megabytes of pixel memory per gif, if it is over, the entire GIF have to be decoded in realtime. */
@@ -117,9 +121,11 @@ namespace GifImage
 		UINT m_cachedKB;
 		ULONG m_lastMemoryCheckEpochTime;
 
+
+		static bool s_isAllAnimationsPaused;
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
-		bool m_isCachingFrames;
+		volatile bool m_isCachingFrames;
 		bool m_isRenderingFrame;
 		bool m_isAnimating;
 		int m_windowID;
