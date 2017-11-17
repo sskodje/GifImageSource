@@ -155,9 +155,9 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GifImage\WindowsPhone\GifImage.GifImageSource.WindowsPhone.vcxproj">
-      <Project>{3e37043a-7ca6-4f22-be21-0a5545e0c6ce}</Project>
-      <Name>GifImageSource.WindowsPhone</Name>
+    <ProjectReference Include="..\GifImage\UWP\GifImageSource.UWP.vcxproj">
+      <Project>{c6773da5-10ba-48e5-addb-0914f230e0bf}</Project>
+      <Name>GifImageSource.UWP</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
