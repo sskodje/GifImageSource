@@ -1,0 +1,59 @@
+﻿<Page
+    x:Class="GifImageSample.UWP.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:GifImageSample.UWP"
+   xmlns:gs="using:GifImage"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Loaded="Page_Loaded"
+    mc:Ignorable="d">
+
+    <Page.BottomAppBar>
+        <CommandBar>
+
+            <AppBarButton x:Name="AppBarButtonLoad"
+                          Icon="Download"
+                          Label="Load source"
+                          Click="AppBarButtonLoad_Click" />
+            <AppBarButton x:Name="AppBarButtonUnload"
+                          Icon="Cancel"
+                          Label="Unload source"
+                          Click="AppBarButtonUnload_Click" />
+            <AppBarButton x:Name="AppBarButtonPlay"
+                          Icon="Play"
+                          Label="Play"
+                          Click="AppBarButtonPlay_Click" />
+            <AppBarButton x:Name="AppBarButtonPause"
+                          Icon="Pause"
+                          Label="Pause"
+                          Click="AppBarButtonPause_Click" />
+
+        </CommandBar>
+    </Page.BottomAppBar>
+    <Grid x:Name="LayoutRoot">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ComboBox x:Name="cbGifs"
+                  Margin="5"
+                  DisplayMemberPath="Uri"
+                  SelectionChanged="cbGifs_SelectionChanged" />
+
+        <Viewbox Grid.Row="1"
+                 StretchDirection="DownOnly">
+            <Image x:Name="_gifImage"
+                   gs:AnimationBehavior.AutoStart="True"
+                   Stretch="Uniform" />
+        </Viewbox>
+        <ProgressRing x:Name="BusyIndicator"
+                      Grid.Row="1"
+                      IsActive="False"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center" />
+
+        <ProgressBar x:Name="_progressBar" Grid.Row="2" />
+    </Grid>
+</Page>

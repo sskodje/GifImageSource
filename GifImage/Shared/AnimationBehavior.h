@@ -93,7 +93,6 @@ namespace GifImage
 	private:
 		static int MyInt;
 		static void s_imageUriChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
-		static void s_imageStreamChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
 		static void s_repeatBehaviorChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
 
 		static Windows::Web::Http::HttpClient^ s_defaultHttpClient;

@@ -1,8 +1,8 @@
 ﻿#include <pch.h>
 #include <ppl.h>
 #include <shcore.h>
-#include <GifImageSource.h>
-#include <Utilities.h>
+#include "GifImageSource.h"
+#include "Utilities.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -17,7 +17,6 @@ using namespace Windows::UI::Xaml::Data;
 using namespace Windows::Foundation;
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage;
-using namespace Windows::Networking::BackgroundTransfer;
 using namespace Windows::UI::Xaml::Media::Animation;
 
 bool GifImageSource::s_isAllAnimationsPaused;
@@ -309,7 +308,7 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 		int endFrame = min(startIndex + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
 		auto token = cancellationTokenSource.get_token();
 		OutputDebugString(("Starting GetRawFramesTask for frame " + startFrame + " to " + endFrame + ".\r\n")->Data());
-		create_task([this, startFrame, endFrame]() {GetRawFramesTask(startFrame, endFrame); }, token)
+		create_task([this, startFrame, endFrame,token]() {GetRawFramesTask(startFrame, endFrame,token); }, token)
 			.then([&](task<void> t)
 		{
 			m_isCachingFrames = false;
@@ -354,7 +353,7 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 }
 
 //Reads a buffer of MAX_CACHED_FRAMES_PER_GIF ahead of current frame.
-void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
+void GifImageSource::GetRawFramesTask(int startFrame, int endFrame,cancellation_token token)
 {
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	if (startFrame > m_dwFrameCount || endFrame > m_dwFrameCount)
@@ -363,7 +362,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 	int end = endFrame;
 	for (int index = start; index < end; index++)
 	{
-		if (is_task_cancellation_requested())
+		if (token.is_canceled())
 		{
 			cancel_current_task();
 		}
@@ -378,7 +377,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 		PROPVARIANT propValue;
 		PropVariantInit(&propValue);
 
-		if (is_task_cancellation_requested())
+		if (token.is_canceled())
 		{
 			cancel_current_task();
 		}
@@ -390,7 +389,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 			// Format convert to 32bppPBGRA which D2D expects
 			hr = m_pIWICFactory->CreateFormatConverter(&pConverter);
 		}
-		if (is_task_cancellation_requested())
+		if (token.is_canceled())
 		{
 			cancel_current_task();
 		}
@@ -404,7 +403,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 				0.f,
 				WICBitmapPaletteTypeCustom);
 		}
-		if (is_task_cancellation_requested())
+		if (token.is_canceled())
 		{
 			cancel_current_task();
 		}
@@ -430,7 +429,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 			m_lastMemoryCheckEpochTime = millisecondsSinceEpoch;
 		}
 #endif
-		if (is_task_cancellation_requested())
+		if (token.is_canceled())
 		{
 			cancel_current_task();
 		}
@@ -454,7 +453,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame)
 			int prevFrame = CurrentFrame;
 			for (int i = 0; i < 6; i++)
 			{
-				if (is_task_cancellation_requested() || m_delays.size() < CurrentFrame)
+				if (token.is_canceled() || m_delays.size() < CurrentFrame)
 				{
 					cancel_current_task();
 				}

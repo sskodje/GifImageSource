@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "AnimationBehavior.h"
-#include "Robuffer.h"
+#include <Robuffer.h>
 #include "Utilities.h"
 
 using namespace GifImage;
@@ -8,7 +8,6 @@ using namespace Windows::UI::Core;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::UI::Xaml::Media::Imaging;
 using namespace concurrency;
-using namespace Windows::Networking::BackgroundTransfer;
 using namespace Windows::Graphics::Imaging;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Web::Http;

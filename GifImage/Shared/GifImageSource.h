@@ -1,10 +1,15 @@
 ﻿#pragma once
 #include <wincodec.h>
-#include "windows.foundation.h"
+#include <windows.foundation.h>
 #include "Direct2DManager.h"
 #include <agents.h>
 #include <chrono>
 
+#pragma comment(lib, "windowscodecs.lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "shcore.lib")
 namespace GifImage
 {
 	public delegate void EventHandler(Platform::Object^ sender);
@@ -162,7 +167,7 @@ namespace GifImage
 		HRESULT CopyCurrentFrameToBitmap();
 
 		concurrency::cancellation_token_source cancellationTokenSource;
-		void GetRawFramesTask(int startFrame, int endFrame);
+		void GetRawFramesTask(int startFrame, int endFrame,concurrency::cancellation_token token);
 
 		long RenderAndPrepareFrame();
 		HRESULT QueryMetadata(IWICMetadataQueryReader *pQueryReader);
