@@ -69,6 +69,14 @@ GifImageSource source = AnimationBehavior.GetGifImageSource(MyImageControl);
 if (source != null)
   source.Stop();
 ```
+To globally pause all gifs and prevent new gifs from playing while active.
+```csharp
+GifImageSource.PauseAllGifs();
+```
+To globally resume all gifs.
+```csharp
+GifImageSource.ResumeAllGifs();
+```
 **Caching:**
 
 Downloaded images are cached in a folder named "GifImageSource" in the ApplicationData.TemporaryFolder. It's up to the app author using this library to clean up these resources as they see fit.
