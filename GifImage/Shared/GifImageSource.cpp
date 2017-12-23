@@ -906,7 +906,10 @@ void GifImageSource::StopAndClear()
 	cancellationTokenSource.cancel();
 	Utilities::ui_task(Dispatcher, [&]()
 	{
-		Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
+		if (m_RenderingToken.Value > 0)
+		{
+			Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
+		}
 	});
 	m_isAnimating = false;
 	ClearResources();
@@ -916,13 +919,19 @@ void GifImageSource::Pause()
 {
 	Utilities::ui_task(Dispatcher, [&]()
 	{
-		Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
+		if (m_RenderingToken.Value > 0)
+		{
+			Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
+		}
 	});
 	m_isAnimating = false;
 }
 void GifImageSource::Stop()
 {
-	Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
+	if (m_RenderingToken.Value > 0)
+	{
+		Windows::UI::Xaml::Media::CompositionTarget::Rendering -= m_RenderingToken;
+	}
 	cancellationTokenSource.cancel();
 	CurrentFrame = 0;
 	m_isAnimating = false;

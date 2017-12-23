@@ -12,6 +12,17 @@
     <Page.BottomAppBar>
         <CommandBar>
 
+            <CommandBar.SecondaryCommands>
+                <AppBarButton x:Name="AppBarButtonOpenListViewTest"
+                              Label="Open ListView test"
+                              Click="AppBarButtonOpenListViewTest_Click" />
+                <AppBarButton x:Name="AppBarButtonOpenGridViewTest"
+                              Label="Open GridView test"
+                              Click="AppBarButtonOpenGridViewTest_Click" />
+                <AppBarButton x:Name="AppBarButtonOpenSingleEmoticonTest"
+                              Label="Open single emoticon test"
+                              Click="AppBarButtonOpenSingleEmoticonTest_Click" />
+            </CommandBar.SecondaryCommands>
             <AppBarButton x:Name="AppBarButtonLoad"
                           Icon="Download"
                           Label="Load source"

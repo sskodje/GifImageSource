@@ -1,4 +1,5 @@
 ﻿using GifImage;
+using GifImageSample.UWP;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,9 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
-#if WINDOWS_PHONE_APP
-using Windows.Phone.UI.Input;
-#endif
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -29,28 +28,13 @@ namespace GifImageSample
         public SingleGifTest()
         {
             this.InitializeComponent();
-#if WINDOWS_APP
-            this.navBackButton.Style = (Style)Resources["NavigationBackButtonNormalStyle"];
-            this.navBackButton.Visibility = Windows.UI.Xaml.Visibility.Visible;
-#endif
-        }
-#if WINDOWS_PHONE_APP
-        void HardwareButtons_BackPressed(object sender, BackPressedEventArgs e)
-        {
-            Frame rootFrame = Window.Current.Content as Frame;
-
-            if (rootFrame != null && rootFrame.CanGoBack)
+            SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility = AppViewBackButtonVisibility.Visible;
+            SystemNavigationManager.GetForCurrentView().BackRequested += (s, e) =>
             {
-                HardwareButtons.BackPressed -= HardwareButtons_BackPressed;
+                if (Frame.CanGoBack)
+                    Frame.GoBack();
                 e.Handled = true;
-                rootFrame.GoBack();
-            }
-        }
-#endif
-        private void navBackButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (Frame.CanGoBack)
-                Frame.GoBack();
+            };
         }
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
@@ -66,17 +50,12 @@ namespace GifImageSample
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
-#if WINDOWS_PHONE_APP
-            HardwareButtons.BackPressed += HardwareButtons_BackPressed;
-#endif
 
         }
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-#if WINDOWS_PHONE_APP
-            HardwareButtons.BackPressed -= HardwareButtons_BackPressed;
-#endif
+
         }
         private void OpenGif(Uri uri)
         {

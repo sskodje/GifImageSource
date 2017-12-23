@@ -97,7 +97,6 @@ namespace GifImageSample.UWP
         }
         private void OpenGif(Uri uri)
         {
-
             AnimationBehavior.SetImageUriSource(_gifImage, uri);
             BusyIndicator.IsActive = true;
         }
@@ -114,6 +113,20 @@ namespace GifImageSample.UWP
             {
                 OpenGif(((MyModel)e.AddedItems[0]).Uri);
             }
+        }
+        private void AppBarButtonOpenListViewTest_Click(object sender, RoutedEventArgs e)
+        {
+            this.Frame.Navigate(typeof(ListViewTest), 150);
+        }
+
+        private void AppBarButtonOpenGridViewTest_Click(object sender, RoutedEventArgs e)
+        {
+            this.Frame.Navigate(typeof(GridViewTest), 12);
+        }
+
+        private void AppBarButtonOpenSingleEmoticonTest_Click(object sender, RoutedEventArgs e)
+        {
+            this.Frame.Navigate(typeof(SingleGifTest));
         }
     }
 }
