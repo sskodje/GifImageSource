@@ -118,28 +118,72 @@
     <None Include="GifImageSample.UWP_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Gifs\1.gif" />
-    <Content Include="Gifs\10.gif" />
-    <Content Include="Gifs\11.gif" />
-    <Content Include="Gifs\12.gif" />
-    <Content Include="Gifs\13.gif" />
-    <Content Include="Gifs\14.gif" />
-    <Content Include="Gifs\15.gif" />
-    <Content Include="Gifs\16.gif" />
-    <Content Include="Gifs\17.gif" />
-    <Content Include="Gifs\18.gif" />
-    <Content Include="Gifs\19.gif" />
-    <Content Include="Gifs\2.gif" />
-    <Content Include="Gifs\20.gif" />
-    <Content Include="Gifs\21.gif" />
-    <Content Include="Gifs\22.gif" />
-    <Content Include="Gifs\3.gif" />
-    <Content Include="Gifs\4.gif" />
-    <Content Include="Gifs\5.gif" />
-    <Content Include="Gifs\6.gif" />
-    <Content Include="Gifs\7.gif" />
-    <Content Include="Gifs\8.gif" />
-    <Content Include="Gifs\9.gif" />
+    <Content Include="..\Shared\Gifs\1.gif">
+      <Link>Gifs\1.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\10.gif">
+      <Link>Gifs\10.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\11.gif">
+      <Link>Gifs\11.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\12.gif">
+      <Link>Gifs\12.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\13.gif">
+      <Link>Gifs\13.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\14.gif">
+      <Link>Gifs\14.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\15.gif">
+      <Link>Gifs\15.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\16.gif">
+      <Link>Gifs\16.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\17.gif">
+      <Link>Gifs\17.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\18.gif">
+      <Link>Gifs\18.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\19.gif">
+      <Link>Gifs\19.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\2.gif">
+      <Link>Gifs\2.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\20.gif">
+      <Link>Gifs\20.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\21.gif">
+      <Link>Gifs\21.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\22.gif">
+      <Link>Gifs\22.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\3.gif">
+      <Link>Gifs\3.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\4.gif">
+      <Link>Gifs\4.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\5.gif">
+      <Link>Gifs\5.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\6.gif">
+      <Link>Gifs\6.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\7.gif">
+      <Link>Gifs\7.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\8.gif">
+      <Link>Gifs\8.gif</Link>
+    </Content>
+    <Content Include="..\Shared\Gifs\9.gif">
+      <Link>Gifs\9.gif</Link>
+    </Content>
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -177,7 +221,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GifImage\UWP\GifImageSource.UWP.vcxproj">
+    <ProjectReference Include="..\..\GifImage\UWP\GifImageSource.UWP.vcxproj">
       <Project>{c6773da5-10ba-48e5-addb-0914f230e0bf}</Project>
       <Name>GifImageSource.UWP</Name>
     </ProjectReference>
