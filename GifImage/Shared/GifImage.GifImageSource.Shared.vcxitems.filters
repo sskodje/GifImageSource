@@ -6,7 +6,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GifImageSource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utilities.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Effect.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Vector2.h">
       <Filter>Effects</Filter>
     </ClInclude>
@@ -34,8 +33,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ConvolveMatrixEffectDescription.h">
       <Filter>Effects\Descriptions</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)EffectGuid.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Vector4F.h">
+      <Filter>Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Effect.h">
+      <Filter>Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)EffectGuid.h">
       <Filter>Effects</Filter>
     </ClInclude>
   </ItemGroup>
@@ -46,7 +50,6 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)GifImageSource.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Effect.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EffectParameterValue.cpp">
       <Filter>Effects</Filter>
     </ClCompile>
@@ -68,7 +71,12 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ConvolveMatrixEffectDescription.cpp">
       <Filter>Effects\Descriptions</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)EffectGuid.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Effect.cpp">
+      <Filter>Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)EffectGuid.cpp">
+      <Filter>Effects</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Effects">
