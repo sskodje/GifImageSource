@@ -31,7 +31,7 @@
                                  StretchDirection="DownOnly">
                             <Image x:Name="_gifImage"
                                    gs:AnimationBehavior.ImageUriSource="{Binding Uri}" />
-
+                            
                         </Viewbox>
                         <!--<ProgressBar x:Name="_progressBar"
                                      Maximum="{Binding ElementName=_gifImage, Path=Source.FrameCount}"

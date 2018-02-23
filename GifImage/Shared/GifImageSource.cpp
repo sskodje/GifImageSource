@@ -3,6 +3,8 @@
 #include <shcore.h>
 #include "GifImageSource.h"
 #include "Utilities.h"
+#include "IEffectDescription.h"
+#include <windows.foundation.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -16,6 +18,7 @@ using namespace Windows::UI::Core;
 using namespace Windows::UI::Xaml::Data;
 using namespace Windows::Foundation;
 using namespace Windows::Graphics::Imaging;
+using namespace Windows::Foundation::Collections;
 using namespace Windows::Storage;
 using namespace Windows::UI::Xaml::Media::Animation;
 
@@ -32,7 +35,7 @@ inline void SafeRelease(T *&pI)
 }
 
 GifImageSource::GifImageSource(int width, int height, Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior)
-	:SurfaceImageSource(width, height),
+	: SurfaceImageSource(width, height),
 	m_width(width),
 	m_height(height),
 	m_dwFrameCount(0),
@@ -85,7 +88,144 @@ void GifImageSource::ClearResources()
 //Renders the frame to screen
 bool GifImageSource::RenderFrame()
 {
+	if (m_effectDescriptions.size() > 0) {
+		return RenderFrameWithEffect();
+	}
+	else {
+		return RenderFrameWithoutEffect();
+	}
+}
 
+//Renders the frame to screen
+bool GifImageSource::RenderFrameWithEffect()
+{
+	auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
+	//Create first effect in the list
+	ComPtr<ID2D1Effect> effect = m_effectDescriptions[0].Apply(d2dContext, effect);
+	
+	HRESULT hr = BeginDraw();
+	if (SUCCEEDED(hr))
+	{
+		ComPtr<ID2D1BitmapRenderTarget> bitmapRenderTarget;
+		d2dContext->Clear();
+		d2dContext->CreateCompatibleRenderTarget(&bitmapRenderTarget);
+		bitmapRenderTarget->BeginDraw();
+		ComPtr<ID2D1Bitmap> foo;
+		hr = bitmapRenderTarget->GetBitmap(&foo);
+		if (m_bitmaps.at(CurrentFrame) != nullptr)
+		{
+			m_pPreviousRawFrame = nullptr;
+			for (uint32 i = 0; i < CurrentFrame; i++)
+			{
+				int disposal = m_disposals[i];
+				auto bitmap = m_bitmaps.at(i).Get();
+				if (bitmap == nullptr)
+				{
+					//Something has gone wrong, this should not happen. We reset to first frame and return true for loop complete.
+					EndDraw();
+					CurrentFrame = 0;
+					throw ref new NullReferenceException("frame cannot be null");
+				}
+				switch (disposal)
+				{
+				case DISPOSAL_UNSPECIFIED:
+				case DISPOSE_DO_NOT:
+				{
+					effect->SetInput(0, bitmap);
+					D2D1_RECT_F rect;
+					rect.left = m_offsets.at(i).x;
+					rect.top = m_offsets.at(i).y;
+					rect.right = bitmap->GetPixelSize().width + m_offsets.at(i).x;
+					rect.bottom = bitmap->GetPixelSize().height + m_offsets.at(i).y;
+					bitmapRenderTarget->DrawBitmap(bitmap, rect);
+					break;
+				}
+				case DISPOSE_BACKGROUND:
+				{
+					auto offset = m_offsets.at(i);
+
+					d2dContext->PushAxisAlignedClip(
+						D2D1::RectF(
+							static_cast<float>(offset.x),
+							static_cast<float>(offset.y),
+							static_cast<float>(offset.x + bitmap->GetPixelSize().width),
+							static_cast<float>(offset.y + bitmap->GetPixelSize().height)
+						),
+						D2D1_ANTIALIAS_MODE_ALIASED);
+
+
+					d2dContext->Clear();
+					d2dContext->PopAxisAlignedClip();
+
+					break;
+				}
+				case DISPOSE_PREVIOUS:
+				default:
+					// We don't need to render the intermediate frame if intIt's not
+					// going to update the intermediate buffer anyway.
+					break;
+				}
+			}
+		}
+
+		hr = GetRawFrame(CurrentFrame);
+		if (hr == E_ABORT)
+		{
+			OutputDebugString(("Bitmap not decoded, delaying frame " + CurrentFrame + "\r\n")->Data());
+			EndDraw();
+			return false;
+		}
+
+		if (m_pPreviousRawFrame != nullptr)
+		{
+			bitmapRenderTarget->DrawBitmap(m_pPreviousRawFrame.Get());
+		}
+		//draw current frame on top
+		effect->SetInput(0, m_pRawFrame.Get());
+		D2D1_RECT_F rect;
+		rect.left = m_offsets.at(CurrentFrame).x;
+		rect.top = m_offsets.at(CurrentFrame).y;
+		rect.right = m_pRawFrame.Get()->GetPixelSize().width + m_offsets.at(CurrentFrame).x;
+		rect.bottom = m_pRawFrame.Get()->GetPixelSize().height + m_offsets.at(CurrentFrame).y;
+		bitmapRenderTarget->DrawBitmap(m_pRawFrame.Get(), rect);
+		bitmapRenderTarget->Flush();
+		bitmapRenderTarget->EndDraw();
+
+		ComPtr<ID2D1Bitmap> bmp;
+		bitmapRenderTarget->GetBitmap(&bmp);
+		effect->SetInput(0, bmp.Get());
+
+		//Apply the remaining effects
+		int i = 0;
+		for each (Effect e in m_effectDescriptions)
+		{
+			if (i > 0) {
+				effect = e.Apply(d2dContext, effect);
+			}
+			i++;
+		}
+
+		d2dContext->DrawImage(effect.Get());
+		hr = d2dContext->Flush();
+
+
+		if (CurrentFrame + 1 < m_dwFrameCount&& m_bitmaps.at(CurrentFrame + 1) == nullptr)
+		{
+			hr = CopyCurrentFrameToBitmap();
+		}
+		EndDraw();
+		m_realtimeBitmapBuffer[CurrentFrame] = nullptr;
+		SelectNextFrame();
+	}
+
+	// Returns true if we just completed a loop
+	return CurrentFrame == 0;
+}
+
+
+//Renders the frame to screen
+bool GifImageSource::RenderFrameWithoutEffect()
+{
 	HRESULT hr = BeginDraw();
 	if (SUCCEEDED(hr))
 	{
@@ -135,7 +275,7 @@ bool GifImageSource::RenderFrame()
 				}
 				case DISPOSE_PREVIOUS:
 				default:
-					// We don't need to render the intermediate frame if it's not
+					// We don't need to render the intermediate frame if intIt's not
 					// going to update the intermediate buffer anyway.
 					break;
 				}
@@ -172,8 +312,7 @@ bool GifImageSource::RenderFrame()
 	return CurrentFrame == 0;
 }
 
-
-//Save the bitmap to m_pPreviousRawFrame, so we can use it as a base frame for the next frame.
+//Save the bitmap to m_pPreviousRawFrame, so we can use intIt as a base frame for the next frame.
 //We do this to avoid having to potentially decode and draw hundreds of base frames for each new frame,
 //since we need to clear the SurfaceImageSource for each draw operation.
 HRESULT GifImageSource::CopyCurrentFrameToBitmap()
@@ -233,7 +372,7 @@ HRESULT GifImageSource::CopyCurrentFrameToBitmap()
 			}
 			case DISPOSE_PREVIOUS:
 			default:
-				// We don't need to render the intermediate frame if it's not
+				// We don't need to render the intermediate frame if intIt's not
 				// going to update the intermediate buffer anyway.
 				break;
 			}
@@ -272,7 +411,7 @@ HRESULT GifImageSource::CopyCurrentFrameToBitmap()
 	}
 	case DISPOSE_PREVIOUS:
 	default:
-		// We don't need to render the intermediate frame if it's not
+		// We don't need to render the intermediate frame if intIt's not
 		// going to update the intermediate buffer anyway.
 		break;
 	}
@@ -308,7 +447,7 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 		int endFrame = min(startIndex + FRAMECOUNT_TO_PRERENDER, m_dwFrameCount);
 		auto token = cancellationTokenSource.get_token();
 		OutputDebugString(("Starting GetRawFramesTask for frame " + startFrame + " to " + endFrame + ".\r\n")->Data());
-		create_task([this, startFrame, endFrame,token]() {GetRawFramesTask(startFrame, endFrame,token); }, token)
+		create_task([this, startFrame, endFrame, token]() {GetRawFramesTask(startFrame, endFrame, token); }, token)
 			.then([&](task<void> t)
 		{
 			m_isCachingFrames = false;
@@ -353,7 +492,7 @@ HRESULT GifImageSource::GetRawFrame(int uFrameIndex)
 }
 
 //Reads a buffer of MAX_CACHED_FRAMES_PER_GIF ahead of current frame.
-void GifImageSource::GetRawFramesTask(int startFrame, int endFrame,cancellation_token token)
+void GifImageSource::GetRawFramesTask(int startFrame, int endFrame, cancellation_token token)
 {
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	if (startFrame > m_dwFrameCount || endFrame > m_dwFrameCount)
@@ -530,7 +669,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 	m_delays = std::vector<USHORT>(m_dwFrameCount);
 	m_disposals = std::vector<USHORT>(m_dwFrameCount);
 
-	//This number is a little bit arbitrary, but it is used to set the max size of frames to cache in raw pixel size.
+	//This number is a little bit arbitrary, but intIt is used to set the max size of frames to cache in raw pixel size.
 	int maxBytesToCache = 1000000;
 	//The frame size for this gif in bytes
 	double frameSizeBytes = (m_width*m_height)*(m_bitsPerPixel) / 8;
@@ -585,7 +724,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 			// Convert bitmap to B8G8R8A8
 			hr = pConvertedBitmap->Initialize(pFrameDecode.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeCustom);
 
-			// Store converted bitmap into IWICBitmap so D2D can use it
+			// Store converted bitmap into IWICBitmap so D2D can use intIt
 			ComPtr<IWICBitmap> pWicBitmap;
 			hr = m_pIWICFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap);
 			auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
@@ -613,13 +752,18 @@ void GifImageSource::LoadImage(IStream *pStream)
 	PropVariantClear(&var);
 }
 
+void GifImage::GifImageSource::SetRenderEffects(std::vector<Effect> effects)
+{
+	m_effectDescriptions = effects;
+}
+
 HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
 {
 	HRESULT hr = S_OK;
 	PROPVARIANT var;
 	PropVariantInit(&var);
 
-	//If the GIF contains more than one frame, assume it's animated.
+	//If the GIF contains more than one frame, assume intIt's animated.
 	if (m_dwFrameCount > 1)
 		m_isAnimatedGif = true;
 
@@ -680,7 +824,7 @@ HRESULT GifImageSource::ReadGifApplicationExtension(IWICMetadataQueryReader *pQu
 		if (count == 3)
 		{
 			auto defaultRepeat = RepeatBehavior();
-			//hack: find it how to compare to default class instead of this.
+			//hack: find intIt how to compare to default class instead of this.
 			if (m_repeatBehavior == nullptr || (defaultRepeat.Type == m_repeatBehavior->Value.Type
 				&& defaultRepeat.Count == m_repeatBehavior->Value.Count
 				&& defaultRepeat.Duration.Duration == m_repeatBehavior->Value.Duration.Duration))
@@ -777,7 +921,7 @@ HRESULT GifImageSource::BeginDraw()
 		// consistent by taking into account the offset returned by BeginDraw, and 
 		// can also improve performance by optimizing the area that is drawn by D2D. 
 		// Apps should always account for the offset output parameter returned by  
-		// BeginDraw, since it may not match the passed updateRect input parameter's location. 
+		// BeginDraw, since intIt may not match the passed updateRect input parameter's location. 
 		d2dContext->PushAxisAlignedClip(
 			D2D1::RectF(
 				static_cast<float>(offset.x),
@@ -793,7 +937,7 @@ HRESULT GifImageSource::BeginDraw()
 	}
 	else if (beginDrawHR == DXGI_ERROR_DEVICE_REMOVED || beginDrawHR == DXGI_ERROR_DEVICE_RESET)
 	{
-		// If the device has been removed or reset, attempt to recreate it and continue drawing. 
+		// If the device has been removed or reset, attempt to recreate intIt and continue drawing. 
 		CreateDeviceResources(true);
 		BeginDraw();
 	}

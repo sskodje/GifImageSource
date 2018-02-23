@@ -22,10 +22,9 @@ namespace GifImageSample
         public MainPage()
         {
             InitializeComponent();
-
         }
 
-        private void AnimationBehavior_OnImageLoaded(object sender,ImageSource src)
+        private void AnimationBehavior_OnImageLoaded(object sender, ImageSource src)
         {
             Image img = (Image)sender;
             if (img.Source is GifImageSource)
@@ -33,7 +32,7 @@ namespace GifImageSample
                 ((GifImageSource)img.Source).OnFrameChanged -= MainPage_OnFrameChanged;
                 ((GifImageSource)img.Source).OnFrameChanged += MainPage_OnFrameChanged;
             }
-            _progressBar.Value=0;
+            _progressBar.Value = 0;
             BusyIndicator.IsActive = false;
         }
 
@@ -84,7 +83,7 @@ namespace GifImageSample
             GifImageSource source = AnimationBehavior.GetGifImageSource(_gifImage);
             if (source != null)
                 source.Stop();
-            _progressBar.Value=0;
+            _progressBar.Value = 0;
         }
         private void BnGridViewTest_Click(object sender, RoutedEventArgs e)
         {
@@ -111,7 +110,7 @@ namespace GifImageSample
                     StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
                     await AnimationBehavior.SetImageStreamSource(_gifImage, await file.OpenReadAsync());
                 }
-                catch(IOException ex)
+                catch (IOException ex)
                 {
                     Debug.WriteLine(ex);
                     BusyIndicator.IsActive = false;
@@ -140,6 +139,7 @@ namespace GifImageSample
 
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
+            AnimationBehavior.SetRenderEffects(_gifImage, GetActiveEffects());
         }
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
@@ -150,6 +150,57 @@ namespace GifImageSample
         private void BnSingleGifTest_Click(object sender, RoutedEventArgs e)
         {
             this.Frame.Navigate(typeof(SingleGifTest));
+        }
+
+
+        private List<IEffectDescription> GetActiveEffects()
+        {
+            List<IEffectDescription> effects = new List<IEffectDescription>();
+            if (cbBrightnessEffect.IsChecked.GetValueOrDefault())
+            {
+                effects.Add(new BrightnessEffectDescription(new Vector2(1.0f, 0.8f), new Vector2(0, 0.1f)));
+            }
+            if (cbColorMatrixEffect.IsChecked.GetValueOrDefault())
+            {
+                effects.Add(new ColorMatrixEffectDescription(
+                    new[] {
+                            0.2125f, 0.2125f, 0.2125f, 0.0f,
+                            0.7154f, 0.7154f, 0.7154f, 0.0f,
+                            0.0721f, 0.0721f, 0.0721f, 0.0f,
+                            0.0f, 0.0f, 0.0f, 1.0f,
+                            0.0f, 0.0f, 0.0f, 0.0f
+                    },
+                    ColorMatrixAlphaMode.Straight, true));
+            }
+            if (cbConvolveMatrixEffect.IsChecked.GetValueOrDefault())
+            {
+                var convolve = new ConvolveMatrixEffectDescription();
+                convolve.SetKernelMatrix(new[] { -1.0f, -1.0f, -1.0f, -1.0f, 9.0f, -1.0f, -1.0f, -1.0f, -1.0f }, 3, 3);
+                effects.Add(convolve);
+            }
+            if (cbGaussianBlurEffect.IsChecked.GetValueOrDefault())
+            {
+                effects.Add(new GaussianBlurEffectDescription(5.0f, GaussianBlurOptimization.Speed, GaussianBlurBorderMode.Soft));
+            }
+            if (cbHueEffect.IsChecked.GetValueOrDefault())
+            {
+                effects.Add(new HueEffectDescription(180.0f));
+            }
+            if (cbSaturationEffect.IsChecked.GetValueOrDefault())
+            {
+                effects.Add(new SaturationEffectDescription());
+            }
+            if(cbTintEffect.IsChecked.GetValueOrDefault())
+            {
+                effects.Add(new TintEffectDescription(new Vector4F(1.0f, 1.0f, 5.0f, 1.0f)));
+            }
+
+            return effects;
+        }
+
+        private void Effect_Click(object sender, RoutedEventArgs e)
+        {
+            AnimationBehavior.SetRenderEffects(_gifImage, GetActiveEffects());
         }
     }
 }

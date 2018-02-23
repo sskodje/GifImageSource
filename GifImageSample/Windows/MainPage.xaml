@@ -13,6 +13,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Viewbox StretchDirection="DownOnly">
@@ -28,16 +29,48 @@
                       Height="100"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center" />
-
         <StackPanel HorizontalAlignment="Center"
                     Orientation="Horizontal"
                     Grid.Row="1">
+            <CheckBox Content="BrightnessEffect"
+                      x:Name="cbBrightnessEffect"
+                      Click="Effect_Click"
+                      Margin="5,0" />
+            <CheckBox Content="ColorMatrixEffect"
+                      x:Name="cbColorMatrixEffect"
+                      Click="Effect_Click"
+                      Margin="5,0" />
+            <CheckBox Content="ConvolveMatrixEffect"
+                      x:Name="cbConvolveMatrixEffect"
+                      Click="Effect_Click"
+                      Margin="5,0" />
+            <CheckBox Content="GaussianBlurEffect"
+                      x:Name="cbGaussianBlurEffect"
+                      Click="Effect_Click"
+                      Margin="5,0" />
+            <CheckBox Content="HueEffect"
+                      x:Name="cbHueEffect"
+                      Click="Effect_Click"
+                      Margin="5,0" />
+            <CheckBox Content="SaturationEffect"
+                      x:Name="cbSaturationEffect"
+                      Click="Effect_Click"
+                      Margin="5,0" />
+            <CheckBox Content="TintEffect"
+                      x:Name="cbTintEffect"
+                      Click="Effect_Click"
+                      Margin="5,0" />
+        </StackPanel>
+        <StackPanel HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Grid.Row="2">
             <ComboBox x:Name="cbGifs"
                       Width="200"
                       Margin="20"
                       DisplayMemberPath="Uri"
                       SelectionChanged="cbGifs_SelectionChanged">
             </ComboBox>
+
             <AppBarButton x:Name="AppBarButtonLoad"
                           Label="load"
                           Icon="Download"

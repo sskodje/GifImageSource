@@ -14,19 +14,40 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BrightnessEffectDescription.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ColorMatrixEffectDescription.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ConvolveMatrixEffectDescription.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Effect.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)EffectGuid.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)EffectParameterValue.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GaussianBlurEffectDescription.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GifImageSource.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HueEffectDescription.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)IEffectDescription.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationBehavior.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Direct2DManager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SaturationEffectDescription.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utilities.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Vector2.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Vector4F.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BrightnessEffectDescription.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ColorMatrixEffectDescription.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ConvolveMatrixEffectDescription.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Effect.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)EffectGuid.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)EffectParameterValue.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GaussianBlurEffectDescription.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GifImageSource.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HueEffectDescription.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)AnimationBehavior.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Direct2DManager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SaturationEffectDescription.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />

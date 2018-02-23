@@ -2,6 +2,7 @@
 #include "AnimationBehavior.h"
 #include <Robuffer.h>
 #include "Utilities.h"
+#include "Effect.h"
 
 using namespace GifImage;
 using namespace Windows::UI::Core;
@@ -23,9 +24,7 @@ Platform::Collections::Map<Platform::String^, int>^ AnimationBehavior::s_loading
 Windows::Web::Http::HttpClient^ AnimationBehavior::s_defaultHttpClient;
 AnimationBehavior::AnimationBehavior()
 {
-
 }
-
 
 AnimationBehavior::~AnimationBehavior()
 {
@@ -105,6 +104,25 @@ void GifImage::AnimationBehavior::SetImageOpenedEventToken(UIElement ^ element, 
 
 #pragma endregion
 #pragma region Attached Properties
+DependencyProperty^ AnimationBehavior::s_renderEffectValueProperty = DependencyProperty::RegisterAttached(
+	"RenderEffects",
+	Windows::Foundation::Collections::IVector<IEffectDescription^>::typeid,
+	AnimationBehavior::typeid,
+	ref new PropertyMetadata(nullptr, ref new PropertyChangedCallback(&AnimationBehavior::s_renderEffectChanged))
+);
+
+Windows::Foundation::Collections::IVector<GifImage::IEffectDescription^>^ AnimationBehavior::GetRenderEffects(UIElement^ element)
+{
+
+	auto val = (Windows::Foundation::Collections::IVector<GifImage::IEffectDescription^>^)element->GetValue(s_renderEffectValueProperty);
+	return val;
+}
+
+void AnimationBehavior::SetRenderEffects(UIElement^ element, Windows::Foundation::Collections::IVector<GifImage::IEffectDescription^>^ value)
+{
+	element->SetValue(s_renderEffectValueProperty, value);
+}
+
 DependencyProperty^ AnimationBehavior::s_repeatBehaviorProperty = DependencyProperty::RegisterAttached(
 	"RepeatBehavior",
 	Windows::UI::Xaml::Media::Animation::RepeatBehavior::typeid,
@@ -125,7 +143,7 @@ void AnimationBehavior::SetRepeatBehavior(UIElement^ element, Windows::UI::Xaml:
 }
 DependencyProperty^ AnimationBehavior::s_httpClientValueProperty = DependencyProperty::RegisterAttached(
 	"CustomHttpClient",
-	Uri::typeid,
+	HttpClient::typeid,
 	AnimationBehavior::typeid,
 	ref new PropertyMetadata(nullptr)
 );
@@ -213,6 +231,23 @@ void GifImage::AnimationBehavior::s_repeatBehaviorChanged(DependencyObject ^ d, 
 			InitAnimation(image, GetImageUriSource(image));
 		else if (GetImageStreamSource(image) != nullptr)
 			InitAnimation(image, GetImageStreamSource(image));
+	}
+}
+void GifImage::AnimationBehavior::s_renderEffectChanged(DependencyObject ^ d, DependencyPropertyChangedEventArgs ^ args)
+{
+	Image^ image = (Image^)d;
+	GifImageSource^ gifImageSource = dynamic_cast<GifImageSource^>(image->Source);
+	if (gifImageSource != nullptr)
+	{
+		std::vector<Effect> effects;
+		if (args->NewValue != nullptr) {
+			auto renderEffects = (Windows::Foundation::Collections::IVector<GifImage::IEffectDescription^>^)args->NewValue;
+			for each (GifImage::IEffectDescription^ desc in renderEffects)
+			{
+				effects.push_back(Effect(desc));
+			}
+		}
+		gifImageSource->SetRenderEffects(effects);
 	}
 }
 #pragma endregion
@@ -425,8 +460,6 @@ void AnimationBehavior::InitAnimation(UIElement^ img, Uri^ uriSource)
 											httpClient = ref new HttpClient();
 										}
 									}
-
-
 									task<HttpResponseMessage^>(httpClient->GetAsync(uriSource))
 										.then([file, image, uriSource](HttpResponseMessage^ message)
 									{
@@ -563,7 +596,6 @@ void AnimationBehavior::ClearImageSource(UIElement^ element)
 				src->StopAndClear();
 			}
 
-
 			auto token = GetImageUnloadedEventToken(image);
 			image->Unloaded -= token;
 		}
@@ -690,18 +722,31 @@ concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStrea
 	int height = Utilities::ReadIntFromStream(pStream, 2);
 	IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior = nullptr;
 
-
 	try
 	{
 		repeatBehavior = GetRepeatBehavior(element);
 	}
-	catch (Platform::Exception^ ex)
-	{
+	catch (Platform::Exception^ ex) {}
 
+	Windows::Foundation::Collections::IVector<GifImage::IEffectDescription^>^ renderEffects = nullptr;
+	try
+	{
+		renderEffects = GetRenderEffects(element);
 	}
+	catch (Platform::Exception^ ex) {}
 
 	GifImageSource^ imageSource = ref new GifImageSource(width, height, repeatBehavior);
 
+	if (renderEffects) {
+
+		std::vector<Effect> effects;
+		for each (GifImage::IEffectDescription^ desc in renderEffects)
+		{
+			effects.push_back(Effect(desc));
+		}
+
+		imageSource->SetRenderEffects(effects);
+	}
 
 	auto setSourceTask = create_task(imageSource->SetSourceAsync(stream));
 

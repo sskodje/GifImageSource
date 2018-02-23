@@ -2,10 +2,8 @@
 #include "pch.h"
 #include <shcore.h>
 #include <chrono>
+#include "IEffectDescription.h"
 
-//using namespace Platform;
-//using namespace  Windows::Security::Cryptography::Core;
-//using namespace Windows::Security::Cryptography;
 namespace Utilities
 {
 	template <typename Func>

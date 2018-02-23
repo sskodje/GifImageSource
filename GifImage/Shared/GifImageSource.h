@@ -1,19 +1,24 @@
 ﻿#pragma once
 #include <wincodec.h>
 #include <windows.foundation.h>
-#include "Direct2DManager.h"
 #include <agents.h>
 #include <chrono>
-
+#include <initguid.h>
+#include "Direct2DManager.h"
+#include "Effect.h"
+#include "IEffectDescription.h"
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "shcore.lib")
+#pragma comment(lib,"dxguid.lib")
+
 namespace GifImage
 {
+	DEFINE_GUID(CLSID_D2D1Posterize, 0x2188945e, 0x33a3, 0x4366, 0xb7, 0xbc, 0x08, 0x6b, 0xd0, 0x2d, 0x08, 0x84);
+	DEFINE_GUID(CLSID_D2D1Sepia, 0x3a1af410, 0x5f1d, 0x4dbe, 0x84, 0xdf, 0x91, 0x5d, 0xa7, 0x9b, 0x71, 0x53);
 	public delegate void EventHandler(Platform::Object^ sender);
-
 	[Windows::Foundation::Metadata::WebHostHidden]
 	[Windows::UI::Xaml::Data::Bindable]
 	public ref class GifImageSource sealed : Windows::UI::Xaml::Media::Imaging::SurfaceImageSource, Windows::UI::Xaml::Data::INotifyPropertyChanged
@@ -96,6 +101,10 @@ namespace GifImage
 		/// Clears all resources currently held in-memory.
 		/// </summary>
 		void ClearResources();
+		/// <summary>
+		/// Sets Direct2D effects for the current gif.
+		/// </summary>
+		void SetRenderEffects(std::vector<Effect> effects);
 
 	private:
 #define DISPOSAL_UNSPECIFIED      0       /* No disposal specified. */
@@ -126,7 +135,6 @@ namespace GifImage
 		UINT m_cachedKB;
 		ULONG m_lastMemoryCheckEpochTime;
 
-
 		static bool s_isAllAnimationsPaused;
 		bool m_haveReservedDeviceResources;
 		bool m_canCacheMoreFrames;
@@ -136,8 +144,8 @@ namespace GifImage
 		int m_windowID;
 		std::chrono::high_resolution_clock::time_point  m_nextFrameTimePoint;
 
-
 		Platform::IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ m_repeatBehavior;
+		std::vector<Effect>	m_effectDescriptions;
 
 		std::vector<Microsoft::WRL::ComPtr<ID2D1Bitmap>> m_bitmaps;
 		std::vector<Microsoft::WRL::ComPtr<ID2D1Bitmap>> m_realtimeBitmapBuffer;
@@ -152,6 +160,8 @@ namespace GifImage
 		/// Renders a single frame and increments the current frame index.
 		/// </summary>
 		bool RenderFrame();
+		bool RenderFrameWithEffect();
+		bool RenderFrameWithoutEffect();
 		void CreateDeviceResources(boolean forceRecreate);
 		HRESULT BeginDraw();
 		void EndDraw();
@@ -161,9 +171,9 @@ namespace GifImage
 		long SetNextInterval();
 		void SelectNextFrame();
 		void LoadImage(IStream* pStream);
+
 		void OnPropertyChanged(Platform::String^ propertyName);
 		void OnSuspending(Platform::Object ^sender, Windows::ApplicationModel::SuspendingEventArgs ^e);
-
 		HRESULT CopyCurrentFrameToBitmap();
 
 		concurrency::cancellation_token_source cancellationTokenSource;

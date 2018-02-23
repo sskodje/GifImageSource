@@ -1,21 +1,19 @@
 #pragma once
 #include "GifImageSource.h"
+#include "Effect.h"
 #include <shcore.h>
 #include <ppl.h>
+#include "IEffectDescription.h";
 
 
 namespace GifImage
 {
-	ref class AnimationBehavior;
 	public delegate void ErrorEventHandler(Platform::Object^ sender, Platform::String^ error);
 	public delegate void ImageLoadedEventHandler(Platform::Object^ sender, Windows::UI::Xaml::Media::ImageSource^ imageSource);
 
 	public ref class AnimationBehavior sealed
 	{
 	public:
-		AnimationBehavior();
-		virtual~AnimationBehavior();
-	
 		static property Windows::Web::Http::HttpClient^ DefaultHttpClient
 		{
 			Windows::Web::Http::HttpClient^ get()
@@ -27,6 +25,16 @@ namespace GifImage
 				s_defaultHttpClient = value;
 			}
 		}
+
+		static property Windows::UI::Xaml::DependencyProperty^ RenderEffectProperty
+		{
+			Windows::UI::Xaml::DependencyProperty^ get()
+			{
+				return s_renderEffectValueProperty;
+			}
+		};
+		static Windows::Foundation::Collections::IVector<GifImage::IEffectDescription^>^ GetRenderEffects(Windows::UI::Xaml::UIElement^ element);
+		static void SetRenderEffects(Windows::UI::Xaml::UIElement^ element, Windows::Foundation::Collections::IVector<GifImage::IEffectDescription^>^ value);
 
 		static property Windows::UI::Xaml::DependencyProperty^ CustomHttpClientProperty
 		{
@@ -91,12 +99,16 @@ namespace GifImage
 		
 
 	private:
-		static int MyInt;
+		AnimationBehavior();
+		~AnimationBehavior();
+
 		static void s_imageUriChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
 		static void s_repeatBehaviorChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
+		static void s_renderEffectChanged(Windows::UI::Xaml::DependencyObject^ target, Windows::UI::Xaml::DependencyPropertyChangedEventArgs^ args);
 
 		static Windows::Web::Http::HttpClient^ s_defaultHttpClient;
 
+		static Windows::UI::Xaml::DependencyProperty^ s_renderEffectValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_httpClientValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageUriValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageStreamValueProperty;
@@ -127,10 +139,8 @@ namespace GifImage
 		static Windows::Foundation::IAsyncAction^ InitAnimation(Windows::UI::Xaml::UIElement^ img, Windows::Storage::Streams::IRandomAccessStream^ streamSource);
 		static void ClearImageSource(Windows::UI::Xaml::UIElement^ element);
 
-
 		static void OnLoaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
 		static void OnUnloaded(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
-
 		static void OnImageOpened(Platform::Object ^sender, Windows::UI::Xaml::RoutedEventArgs ^e);
 };
 }
