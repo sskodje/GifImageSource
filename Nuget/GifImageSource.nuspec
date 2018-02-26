@@ -2,15 +2,14 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>GifImageSource</id>
-    <version>1.1.7</version>
+    <version>1.1.8</version>
     <authors>Sverre Kristoffer Skodje</authors>
     <owners>Sverre Kristoffer Skodje</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <licenseUrl>https://github.com/sskodje/GifImageSource/blob/master/LICENSE.md</licenseUrl>
     <projectUrl>https://github.com/sskodje/GifImageSource</projectUrl>
     <description>GifImageSource is a Windows Runtime Component for WinRT, Windows Phone 8 and Universal Windows projects, made for rendering GIF images in a resource efficient way using Direct2D</description>
-    <releaseNotes>1.17
-		- Added support for Direct2D effects.</releaseNotes>
+    <releaseNotes>Added support for rendering non-gif images with Direct2D effects.</releaseNotes>
     <copyright>Copyright © Sverre Kristoffer Skodje 2018</copyright>
     <language>en-GB</language>
     <tags>animated gif winrt windows-phone UWP</tags>
