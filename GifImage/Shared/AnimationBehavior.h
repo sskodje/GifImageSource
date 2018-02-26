@@ -89,7 +89,16 @@ namespace GifImage
 		static Platform::Boolean  GetAutoStart(Windows::UI::Xaml::UIElement^ element);
 		static void SetAutoStart(Windows::UI::Xaml::UIElement^ element, Platform::Boolean value);
 
+		static property Windows::UI::Xaml::DependencyProperty^ HandleNonGifImagesProperty
+		{
+			Windows::UI::Xaml::DependencyProperty^ get()
+			{
+				return s_handleNonGifImagesProperty;
+			}
+		};
 
+		static Platform::Boolean  GetHandleNonGifImages(Windows::UI::Xaml::UIElement^ element);
+		static void SetHandleNonGifImages(Windows::UI::Xaml::UIElement^ element, Platform::Boolean value);
 
 
 		static GifImageSource^ GetGifImageSource(Windows::UI::Xaml::UIElement^ element);
@@ -108,6 +117,7 @@ namespace GifImage
 
 		static Windows::Web::Http::HttpClient^ s_defaultHttpClient;
 
+		static Windows::UI::Xaml::DependencyProperty^ s_handleNonGifImagesProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_renderEffectValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_httpClientValueProperty;
 		static Windows::UI::Xaml::DependencyProperty^ s_imageUriValueProperty;

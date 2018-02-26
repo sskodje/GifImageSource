@@ -250,8 +250,25 @@ void GifImage::AnimationBehavior::s_renderEffectChanged(DependencyObject ^ d, De
 		gifImageSource->SetRenderEffects(effects);
 	}
 }
-#pragma endregion
 
+DependencyProperty^ AnimationBehavior::s_handleNonGifImagesProperty = DependencyProperty::RegisterAttached(
+	"HandleNonGifImages",
+	Platform::Boolean::typeid,
+	AnimationBehavior::typeid,
+	ref new PropertyMetadata(nullptr)
+);
+
+Platform::Boolean GifImage::AnimationBehavior::GetHandleNonGifImages(Windows::UI::Xaml::UIElement ^ element)
+{
+	auto val = safe_cast<Platform::Boolean>(element->GetValue(s_handleNonGifImagesProperty));
+	return val;
+}
+
+void GifImage::AnimationBehavior::SetHandleNonGifImages(Windows::UI::Xaml::UIElement ^ element, Platform::Boolean value)
+{
+	element->SetValue(s_handleNonGifImagesProperty,value);
+}
+#pragma endregion
 GifImageSource^ AnimationBehavior::GetGifImageSource(UIElement^ element)
 {
 	auto img = dynamic_cast<Image^>(element);
@@ -709,17 +726,57 @@ concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStrea
 
 	auto pStream = pIStream.Get();
 
-	std::string str = Utilities::ReadStringFromStream(pStream, 3);
-	if (str != "GIF")
-		throw ref new InvalidArgumentException("File is not a valid GIF file");
+	std::string signature = Utilities::ReadStringFromStream(pStream, 16);
 
-	str = Utilities::ReadStringFromStream(pStream, 3);
-	if (str != "89a" && str != "87a")
-		throw ref new InvalidArgumentException("Unsupported GIF version");
+	Utilities::ImageFileType type = Utilities::getImageTypeByMagic(signature.data());
 
+	UINT width = 0;
+	UINT height = 0;
 
-	int width = Utilities::ReadIntFromStream(pStream, 2);
-	int height = Utilities::ReadIntFromStream(pStream, 2);
+	LARGE_INTEGER li;
+	switch (type)
+	{
+	case Utilities::IMAGE_FILE_GIF:
+		li.QuadPart = 6;
+		pStream->Seek(li, STREAM_SEEK_SET, nullptr);
+		width = Utilities::ReadIntFromStream(pStream, 2);
+		height = Utilities::ReadIntFromStream(pStream, 2);
+		break;
+	case Utilities::IMAGE_FILE_JPG:
+	case Utilities::IMAGE_FILE_TIFF:
+	case Utilities::IMAGE_FILE_BMP:
+	case Utilities::IMAGE_FILE_PNG:
+	{
+		if (!GetHandleNonGifImages(element)) {
+			throw ref new InvalidArgumentException("File is not a valid GIF file");
+		}
+		li.QuadPart = 0;
+		pStream->Seek(li, STREAM_SEEK_SET, nullptr);
+		auto d2dManager = Direct2DManager::GetInstance(Window::Current->GetHashCode());
+		// WIC Decoder
+		ComPtr<IWICBitmapDecoder> decoder;
+		DX::ThrowIfFailed(
+			d2dManager->GetIWICFactory()->CreateDecoderFromStream(
+				pStream,
+				nullptr,
+				WICDecodeMetadataCacheOnDemand,
+				&decoder
+			)
+		);
+
+		// Frame
+		ComPtr<IWICBitmapFrameDecode> frame;
+		DX::ThrowIfFailed(
+			decoder->GetFrame(0, &frame)
+		);
+		DX::ThrowIfFailed(frame->GetSize(&width, &height));
+	}
+	break;
+	default:
+		throw ref new InvalidArgumentException("File is not a valid image file");
+		break;
+	}
+
 	IBox<Windows::UI::Xaml::Media::Animation::RepeatBehavior>^ repeatBehavior = nullptr;
 
 	try
@@ -747,8 +804,9 @@ concurrency::task<GifImageSource^> AnimationBehavior::GetGifImageSourceFromStrea
 
 		imageSource->SetRenderEffects(effects);
 	}
-
-	auto setSourceTask = create_task(imageSource->SetSourceAsync(stream));
+	li.QuadPart = 0;
+	pStream->Seek(li, STREAM_SEEK_SET, nullptr);
+	auto setSourceTask = create_task(imageSource->SetSourceAsync(pStream, type));
 
 	return	setSourceTask.then([imageSource]()->GifImageSource^
 	{

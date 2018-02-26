@@ -1,11 +1,12 @@
 ﻿#pragma once
-#include <wincodec.h>
+
 #include <windows.foundation.h>
 #include <agents.h>
 #include <chrono>
 #include <initguid.h>
 #include "Direct2DManager.h"
 #include "Effect.h"
+#include "Utilities.h"
 #include "IEffectDescription.h"
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "d2d1.lib")
@@ -16,8 +17,6 @@
 
 namespace GifImage
 {
-	DEFINE_GUID(CLSID_D2D1Posterize, 0x2188945e, 0x33a3, 0x4366, 0xb7, 0xbc, 0x08, 0x6b, 0xd0, 0x2d, 0x08, 0x84);
-	DEFINE_GUID(CLSID_D2D1Sepia, 0x3a1af410, 0x5f1d, 0x4dbe, 0x84, 0xdf, 0x91, 0x5d, 0xa7, 0x9b, 0x71, 0x53);
 	public delegate void EventHandler(Platform::Object^ sender);
 	[Windows::Foundation::Metadata::WebHostHidden]
 	[Windows::UI::Xaml::Data::Bindable]
@@ -94,6 +93,10 @@ namespace GifImage
 
 	internal:
 		/// <summary>
+		/// Loads the image from the specified image stream.
+		/// </summary>
+		Windows::Foundation::IAsyncAction^ SetSourceAsync(ComPtr<IStream> pIStream,Utilities::ImageFileType filetype);
+		/// <summary>
 		/// Stops the animation and clears all resources
 		/// </summary>
 		void StopAndClear();
@@ -119,7 +122,6 @@ namespace GifImage
 #define MEMORY_PERCENT_TO_DELETE_FRAME_CACHE	70	/* The percent of total allowed app memory used before we delete all cached frames */
 
 		Microsoft::WRL::ComPtr<ID2D1Bitmap1> m_surfaceBitmap;
-		Microsoft::WRL::ComPtr<IWICImagingFactory> m_pIWICFactory;
 		Microsoft::WRL::ComPtr<ID2D1Bitmap>            m_pRawFrame;
 		Microsoft::WRL::ComPtr<ID2D1Bitmap>            m_pPreviousRawFrame;
 		Microsoft::WRL::ComPtr<IWICBitmapDecoder> m_pDecoder;
@@ -128,6 +130,7 @@ namespace GifImage
 		UINT m_height;
 		UINT m_dwFrameCount;
 		bool m_isAnimatedGif;
+		bool m_isLoaded;
 		UINT m_completedLoopCount;
 		UINT m_dwCurrentFrame;
 		UINT m_dwPreviousFrame;
@@ -170,8 +173,8 @@ namespace GifImage
 		void StopDurationTimer();
 		long SetNextInterval();
 		void SelectNextFrame();
+		void LoadGif(IStream* pStream);
 		void LoadImage(IStream* pStream);
-
 		void OnPropertyChanged(Platform::String^ propertyName);
 		void OnSuspending(Platform::Object ^sender, Windows::ApplicationModel::SuspendingEventArgs ^e);
 		HRESULT CopyCurrentFrameToBitmap();

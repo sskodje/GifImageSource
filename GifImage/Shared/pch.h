@@ -5,7 +5,7 @@
 
 #include <wrl.h> 
 #include <wrl\client.h> 
-
+#include <wincodec.h>
 #include <dxgi.h> 
 #include <dxgi1_2.h> 
 #include <d2d1_1.h> 

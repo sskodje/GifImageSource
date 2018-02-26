@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Direct2DManager.h"
-#include <wincodec.h>
 using namespace D2D1;
 using namespace GifImage;
 using namespace Microsoft::WRL;
@@ -72,7 +71,11 @@ void Direct2DManager::CreateDeviceResources()
 			)
 		);
 
-
+	DX::ThrowIfFailed(CoCreateInstance(CLSID_WICImagingFactory,
+		NULL,
+		CLSCTX_INPROC_SERVER,
+		IID_IWICImagingFactory,
+		(LPVOID*)&m_pIWICFactory));
 
 	// Get the Direct3D 11.1 API device. 
 	DX::ThrowIfFailed(

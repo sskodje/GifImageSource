@@ -6,10 +6,83 @@
 
 namespace Utilities
 {
+	enum ImageFileType
+	{
+		IMAGE_FILE_JPG,      // joint photographic experts group - .jpeg or .jpg
+		IMAGE_FILE_PNG,      // portable network graphics
+		IMAGE_FILE_GIF,      // graphics interchange format 
+		IMAGE_FILE_TIFF,     // tagged image file format
+		IMAGE_FILE_BMP,      // Microsoft bitmap format
+		IMAGE_FILE_WEBP,     // Google WebP format, a type of .riff file
+		IMAGE_FILE_ICO,      // Microsoft icon format
+		IMAGE_FILE_INVALID,  // unidentified image types.
+	};
+	static ImageFileType getImageTypeByMagic(const char* data)
+	{
+		//if (len < 16) return IMAGE_FILE_INVALID;
+
+		// .jpg:  FF D8 FF
+		// .png:  89 50 4E 47 0D 0A 1A 0A
+		// .gif:  GIF87a      
+		//        GIF89a
+		// .tiff: 49 49 2A 00
+		//        4D 4D 00 2A
+		// .bmp:  BM 
+		// .webp: RIFF ???? WEBP 
+		// .ico   00 00 01 00
+		//        00 00 02 00 ( cursor files )
+
+		switch (data[0])
+		{
+		case '\xFF':
+			return (!strncmp((const char*)data, "\xFF\xD8\xFF", 3)) ?
+				IMAGE_FILE_JPG : IMAGE_FILE_INVALID;
+
+		case '\x89':
+			return (!strncmp((const char*)data,
+				"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8)) ?
+				IMAGE_FILE_PNG : IMAGE_FILE_INVALID;
+
+		case 'G':
+			return (!strncmp((const char*)data, "GIF87a", 6) ||
+				!strncmp((const char*)data, "GIF89a", 6)) ?
+				IMAGE_FILE_GIF : IMAGE_FILE_INVALID;
+
+		case 'I':
+			return (!strncmp((const char*)data, "\x49\x49\x2A\x00", 4)) ?
+				IMAGE_FILE_TIFF : IMAGE_FILE_INVALID;
+
+		case 'M':
+			return (!strncmp((const char*)data, "\x4D\x4D\x00\x2A", 4)) ?
+				IMAGE_FILE_TIFF : IMAGE_FILE_INVALID;
+
+		case 'B':
+			return ((data[1] == 'M')) ?
+				IMAGE_FILE_BMP : IMAGE_FILE_INVALID;
+
+		case 'R':
+			if (strncmp((const char*)data, "RIFF", 4))
+				return IMAGE_FILE_INVALID;
+			if (strncmp((const char*)(data + 8), "WEBP", 4))
+				return IMAGE_FILE_INVALID;
+			return IMAGE_FILE_WEBP;
+
+		case '\0':
+			if (!strncmp((const char*)data, "\x00\x00\x01\x00", 4))
+				return IMAGE_FILE_ICO;
+			if (!strncmp((const char*)data, "\x00\x00\x02\x00", 4))
+				return IMAGE_FILE_ICO;
+			return IMAGE_FILE_INVALID;
+
+		default:
+			return IMAGE_FILE_INVALID;
+		}
+	}
+
 	template <typename Func>
 	static void ui_task(Windows::UI::Core::CoreDispatcher^ dispatcher, Func func)
 	{
-		dispatcher->RunAsync(CoreDispatcherPriority::Normal,ref new Windows::UI::Core::DispatchedHandler([=]()
+		dispatcher->RunAsync(CoreDispatcherPriority::Normal, ref new Windows::UI::Core::DispatchedHandler([=]()
 		{
 			try
 			{
@@ -29,24 +102,24 @@ namespace Utilities
 #if DEBUG
 		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 #endif
-				func();
+		func();
 #if DEBUG
-				high_resolution_clock::time_point t2 = high_resolution_clock::now();
-				auto duration = duration_cast<milliseconds>(t2 - t1).count();
-				OutputDebugString(("Duration for "+ name +": "+ duration + "ms\r\n")->Data());
+		high_resolution_clock::time_point t2 = high_resolution_clock::now();
+		auto duration = duration_cast<milliseconds>(t2 - t1).count();
+		OutputDebugString(("Duration for " + name + ": " + duration + "ms\r\n")->Data());
 #endif
-		
+
 	}
 
 	static int16 ReadIntFromStream(IStream *stream, uint32_t count)
 	{
 		const int16 PE_POINTER_OFFSET = 60;
-		auto bytes = std::unique_ptr<char[]>(new char[count]);
+		int16 width;
 		ULONG* bytesRead = 0;
-		stream->Read(bytes.get(), count, bytesRead);
-		int16 head_addr = *reinterpret_cast<int16*>(bytes.get());
-		return head_addr;
+		stream->Read(reinterpret_cast<int16*>(&width), count, bytesRead);
+		return width;
 	}
+
 	static std::string ReadStringFromStream(IStream *stream, uint32_t count)
 	{
 		auto bytes = std::unique_ptr<char[]>(new char[count]);
@@ -66,7 +139,7 @@ namespace Utilities
 			}
 		}
 		return s;
-	} 
+	}
 
 	static std::wstring StringToWideString(const std::string& s) {
 		int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), s.length(), NULL, 0);
@@ -121,7 +194,7 @@ namespace Utilities
 		return ext;
 	}
 
-	 static Platform::String^ GetCacheFileName(Platform::String^ str)
+	static Platform::String^ GetCacheFileName(Platform::String^ str)
 	{
 		auto provider = Windows::Security::Cryptography::Core::HashAlgorithmProvider::OpenAlgorithm(Windows::Security::Cryptography::Core::HashAlgorithmNames::Md5);
 		Windows::Security::Cryptography::Core::CryptographicHash^ objHash = provider->CreateHash();
@@ -131,10 +204,10 @@ namespace Utilities
 		return Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(buffHash1);
 	}
 
-	 static bool IsLoaded(Windows::UI::Xaml::FrameworkElement^ element)
-	 {
-		 return Windows::UI::Xaml::Media::VisualTreeHelper::GetParent(element) != nullptr;
-	 }
+	static bool IsLoaded(Windows::UI::Xaml::FrameworkElement^ element)
+	{
+		return Windows::UI::Xaml::Media::VisualTreeHelper::GetParent(element) != nullptr;
+	}
 
 }
 

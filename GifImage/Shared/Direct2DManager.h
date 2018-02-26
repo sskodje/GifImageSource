@@ -36,6 +36,10 @@ namespace GifImage
 		{
 			return m_d3dDevice;
 		}
+		inline Microsoft::WRL::ComPtr<IWICImagingFactory> GetIWICFactory()
+		{
+			return m_pIWICFactory;
+		}
 		void ClearDeviceResource();
 		void Recreate();
 
@@ -52,6 +56,8 @@ namespace GifImage
 		//D3D members
 		Microsoft::WRL::ComPtr<ID3D11Device>				   m_d3dDevice;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext>             m_d3dContext;
+		//WIC members
+		Microsoft::WRL::ComPtr<IWICImagingFactory> m_pIWICFactory;
 
 		void CreateDeviceResources();
 	};

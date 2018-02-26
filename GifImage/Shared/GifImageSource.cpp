@@ -102,7 +102,7 @@ bool GifImageSource::RenderFrameWithEffect()
 	auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 	//Create first effect in the list
 	ComPtr<ID2D1Effect> effect = m_effectDescriptions[0].Apply(d2dContext, effect);
-	
+
 	HRESULT hr = BeginDraw();
 	if (SUCCEEDED(hr))
 	{
@@ -526,7 +526,7 @@ void GifImageSource::GetRawFramesTask(int startFrame, int endFrame, cancellation
 		if (SUCCEEDED(hr))
 		{
 			// Format convert to 32bppPBGRA which D2D expects
-			hr = m_pIWICFactory->CreateFormatConverter(&pConverter);
+			hr = Direct2DManager::GetInstance(m_windowID)->GetIWICFactory()->CreateFormatConverter(&pConverter);
 		}
 		if (token.is_canceled())
 		{
@@ -618,50 +618,132 @@ void GifImageSource::SelectNextFrame()
 }
 
 
-Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessStream^ pStream)
+Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(IRandomAccessStream^ stream)
 {
-	if (pStream == nullptr)
+	if (stream == nullptr)
+		throw ref new Platform::InvalidArgumentException();
+	ComPtr<IStream> pIStream;
+	DX::ThrowIfFailed(
+		CreateStreamOverRandomAccessStream(
+			reinterpret_cast<IUnknown*>(stream),
+			IID_PPV_ARGS(&pIStream)));
+
+	std::string signature = Utilities::ReadStringFromStream(pIStream.Get(), 16);
+
+	Utilities::ImageFileType type = Utilities::getImageTypeByMagic(signature.data());
+	LARGE_INTEGER li;
+	li.QuadPart = 0;
+	pIStream->Seek(li, STREAM_SEEK_SET, nullptr);
+	return SetSourceAsync(pIStream, type);
+}
+
+Windows::Foundation::IAsyncAction^ GifImageSource::SetSourceAsync(ComPtr<IStream> pIStream, Utilities::ImageFileType filetype)
+{
+	if (pIStream == nullptr)
 		throw ref new Platform::InvalidArgumentException();
 	CurrentFrame = 0;
 	m_dwPreviousFrame = 0;
 	m_completedLoopCount = 0;
 	m_cachedKB = 0;
-	return create_async([this, pStream]() -> void
+	return create_async([this, pIStream, filetype]() -> void
 	{
+		switch (filetype)
+		{
+		case Utilities::IMAGE_FILE_GIF:
+			LoadGif(pIStream.Get());
+			break;
+		case Utilities::IMAGE_FILE_JPG:
+		case Utilities::IMAGE_FILE_PNG:
+		case Utilities::IMAGE_FILE_TIFF:
+		case Utilities::IMAGE_FILE_BMP:
+			LoadImage(pIStream.Get());
+			break;
+		case Utilities::IMAGE_FILE_INVALID:
+		default:
+			throw ref new InvalidArgumentException("File is not a valid image file");
+			break;
+		}
 
-
-		ComPtr<IStream> pIStream;
-		DX::ThrowIfFailed(
-			CreateStreamOverRandomAccessStream(
-				reinterpret_cast<IUnknown*>(pStream),
-				IID_PPV_ARGS(&pIStream)));
-
-		LoadImage(pIStream.Get());
 	});
 }
-
 void GifImageSource::LoadImage(IStream *pStream)
 {
-	HRESULT hr = S_OK;
 	PROPVARIANT var;
 
 	PropVariantInit(&var);
-
+	auto pIWICFactory = Direct2DManager::GetInstance(m_windowID)->GetIWICFactory();
 	// IWICBitmapDecoder is roughly analogous to BitmapDecoder
-	hr = m_pIWICFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnDemand, &m_pDecoder);
-	DX::ThrowIfFailed(hr);
+	DX::ThrowIfFailed(pIWICFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnDemand, &m_pDecoder));
+
+	m_dwFrameCount = 1;
+
+	m_bitmaps = std::vector<ComPtr<ID2D1Bitmap>>(m_dwFrameCount);
+	m_realtimeBitmapBuffer = std::vector<ComPtr<ID2D1Bitmap>>(m_dwFrameCount);
+	m_offsets = std::vector<D2D1_POINT_2F>(m_dwFrameCount);
+	m_delays = std::vector<USHORT>(m_dwFrameCount);
+	m_disposals = std::vector<USHORT>(m_dwFrameCount);
+
+	// IWICBitmapFrameDecode is roughly analogous to BitmapFrame
+	ComPtr<IWICBitmapFrameDecode> pFrameDecode;
+	DX::ThrowIfFailed(m_pDecoder->GetFrame(0, &pFrameDecode));
+
+	FLOAT fOffsetX = 0.0;
+	FLOAT fOffsetY = 0.0;
+	USHORT dwDelay = 10; // default to 10 hundredths of a second (100 ms)
+	USHORT dwDisposal = 0;
+
+	// Set up converter 
+	ComPtr<IWICFormatConverter> pConvertedBitmap;
+	DX::ThrowIfFailed(pIWICFactory->CreateFormatConverter(&pConvertedBitmap));
+	// Convert bitmap to B8G8R8A8
+	DX::ThrowIfFailed(pConvertedBitmap->Initialize(pFrameDecode.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeCustom));
+
+	// Store converted bitmap into IWICBitmap so D2D can use intIt
+	ComPtr<IWICBitmap> pWicBitmap;
+	DX::ThrowIfFailed(pIWICFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap));
+	auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
+
+	// Finally, get ID2D1Bitmap for this frame
+	ComPtr<ID2D1Bitmap> pBitmap;
+
+	DX::ThrowIfFailed(d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap));
+
+	// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
+	m_bitmaps[0] = pBitmap;
+	m_offsets[0] = { fOffsetX, fOffsetY };
+	m_delays[0] = dwDelay;
+	m_disposals[0] = dwDisposal;
+	m_isLoaded = true;
+	//render frame
+	Utilities::ui_task(Dispatcher, [&]()
+	{
+		OnPropertyChanged("FrameCount");
+		RenderFrame();
+	});
+
+	PropVariantClear(&var);
+}
+
+void GifImageSource::LoadGif(IStream *pStream)
+{
+	PROPVARIANT var;
+
+	PropVariantInit(&var);
+	auto pIWICFactory = Direct2DManager::GetInstance(m_windowID)->GetIWICFactory();
+	// IWICBitmapDecoder is roughly analogous to BitmapDecoder
+	DX::ThrowIfFailed(pIWICFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnDemand, &m_pDecoder));
+
 
 	// IWICMetadataQueryReader is roughly analogous to BitmapPropertiesView
 	ComPtr<IWICMetadataQueryReader> pQueryReader;
-	hr = m_pDecoder->GetMetadataQueryReader(&pQueryReader);
-	DX::ThrowIfFailed(hr);
+	DX::ThrowIfFailed(m_pDecoder->GetMetadataQueryReader(&pQueryReader));
+
 	// Get frame count
 	UINT dwFrameCount = 0;
-	hr = m_pDecoder->GetFrameCount(&dwFrameCount);
+	DX::ThrowIfFailed(m_pDecoder->GetFrameCount(&dwFrameCount));
 	m_dwFrameCount = dwFrameCount;
 	// Get image metadata
-	hr = QueryMetadata(pQueryReader.Get());
-	DX::ThrowIfFailed(hr);
+	DX::ThrowIfFailed(QueryMetadata(pQueryReader.Get()));
 
 	m_bitmaps = std::vector<ComPtr<ID2D1Bitmap>>(m_dwFrameCount);
 	m_realtimeBitmapBuffer = std::vector<ComPtr<ID2D1Bitmap>>(m_dwFrameCount);
@@ -686,11 +768,11 @@ void GifImageSource::LoadImage(IStream *pStream)
 	{
 		// IWICBitmapFrameDecode is roughly analogous to BitmapFrame
 		ComPtr<IWICBitmapFrameDecode> pFrameDecode;
-		hr = m_pDecoder->GetFrame(dwFrameIndex, &pFrameDecode);
+		DX::ThrowIfFailed(m_pDecoder->GetFrame(dwFrameIndex, &pFrameDecode));
 
 		// Need to get delay and offset metadata for each frame
 		ComPtr<IWICMetadataQueryReader> pFrameQueryReader;
-		hr = pFrameDecode->GetMetadataQueryReader(&pFrameQueryReader);
+		DX::ThrowIfFailed(pFrameDecode->GetMetadataQueryReader(&pFrameQueryReader));
 
 		FLOAT fOffsetX = 0.0;
 		FLOAT fOffsetY = 0.0;
@@ -698,42 +780,41 @@ void GifImageSource::LoadImage(IStream *pStream)
 		USHORT dwDisposal = 0;
 		// Get delay
 		PropVariantClear(&var);
-		hr = pFrameQueryReader->GetMetadataByName(L"/grctlext/Delay", &var);
+		DX::ThrowIfFailed(pFrameQueryReader->GetMetadataByName(L"/grctlext/Delay", &var));
 		dwDelay = var.uiVal;
 
 		//Get disposal
 		PropVariantClear(&var);
-		hr = pFrameQueryReader->GetMetadataByName(L"/grctlext/Disposal", &var);
+		DX::ThrowIfFailed(pFrameQueryReader->GetMetadataByName(L"/grctlext/Disposal", &var));
 		dwDisposal = var.uiVal;
 
 		// Get offset
 		PropVariantClear(&var);
-		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Left", &var);
+		DX::ThrowIfFailed(pFrameQueryReader->GetMetadataByName(L"/imgdesc/Left", &var));
 		fOffsetX = var.uiVal;
 
 		PropVariantClear(&var);
-		hr = pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var);
+		DX::ThrowIfFailed(pFrameQueryReader->GetMetadataByName(L"/imgdesc/Top", &var));
 		fOffsetY = var.uiVal;
 		//Preload the bitmaps for the first frames
 		if (dwFrameIndex < frameCountToPreload)
 		{
 			// Set up converter 
 			ComPtr<IWICFormatConverter> pConvertedBitmap;
-			hr = m_pIWICFactory->CreateFormatConverter(&pConvertedBitmap);
+			DX::ThrowIfFailed(pIWICFactory->CreateFormatConverter(&pConvertedBitmap));
 
 			// Convert bitmap to B8G8R8A8
-			hr = pConvertedBitmap->Initialize(pFrameDecode.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeCustom);
+			DX::ThrowIfFailed(pConvertedBitmap->Initialize(pFrameDecode.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeCustom));
 
 			// Store converted bitmap into IWICBitmap so D2D can use intIt
 			ComPtr<IWICBitmap> pWicBitmap;
-			hr = m_pIWICFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap);
+			DX::ThrowIfFailed(pIWICFactory->CreateBitmapFromSource(pConvertedBitmap.Get(), WICBitmapCacheOnDemand, &pWicBitmap));
 			auto d2dContext = Direct2DManager::GetInstance(m_windowID)->GetD2DContext();
 
 			// Finally, get ID2D1Bitmap for this frame
 			ComPtr<ID2D1Bitmap> pBitmap;
 
-			hr = d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap);
-			DX::ThrowIfFailed(hr);
+			DX::ThrowIfFailed(d2dContext->CreateBitmapFromWicBitmap(pWicBitmap.Get(), &pBitmap));
 
 			// Push raw frames into bitmaps array. These need to be processed into proper frames before being drawn to screen.
 			m_bitmaps[dwFrameIndex] = pBitmap;
@@ -742,6 +823,7 @@ void GifImageSource::LoadImage(IStream *pStream)
 		m_delays[dwFrameIndex] = dwDelay;
 		m_disposals[dwFrameIndex] = dwDisposal;
 	}
+	m_isLoaded = true;
 	//render first frame
 	Utilities::ui_task(Dispatcher, [&]()
 	{
@@ -752,9 +834,11 @@ void GifImageSource::LoadImage(IStream *pStream)
 	PropVariantClear(&var);
 }
 
-void GifImage::GifImageSource::SetRenderEffects(std::vector<Effect> effects)
+void GifImageSource::SetRenderEffects(std::vector<Effect> effects)
 {
 	m_effectDescriptions = effects;
+	if (m_isLoaded)
+		RenderFrame();
 }
 
 HRESULT GifImageSource::QueryMetadata(IWICMetadataQueryReader *pQueryReader)
@@ -867,11 +951,7 @@ void GifImageSource::CreateDeviceResources(boolean forceRecreate)
 	}
 
 
-	HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory,
-		NULL,
-		CLSCTX_INPROC_SERVER,
-		IID_IWICImagingFactory,
-		(LPVOID*)&m_pIWICFactory);
+
 
 
 
@@ -1019,11 +1099,7 @@ void GifImageSource::Start()
 {
 
 	if (!m_isAnimatedGif)
-	{
-		CurrentFrame = 0;
-		RenderFrame();
 		return;
-	}
 	if (m_isAnimating)
 		return;
 
