@@ -48,6 +48,7 @@
     <Grid x:Name="LayoutRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -55,19 +56,32 @@
                   Margin="5"
                   DisplayMemberPath="Uri"
                   SelectionChanged="cbGifs_SelectionChanged" />
-
-        <Viewbox Grid.Row="1"
+        <ComboBox x:Name="cbEffects"
+                  Grid.Row="1"
+                  Margin="5,0">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox Content="{Binding Name}"
+                                  IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                  Checked="CheckBox_CheckedChanged"
+                                  Unchecked="CheckBox_CheckedChanged" />
+                    </StackPanel>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+        <Viewbox Grid.Row="2"
                  StretchDirection="DownOnly">
             <Image x:Name="_gifImage"
                    gs:AnimationBehavior.AutoStart="True"
                    Stretch="Uniform" />
         </Viewbox>
         <ProgressRing x:Name="BusyIndicator"
-                      Grid.Row="1"
+                      Grid.Row="2"
                       IsActive="False"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center" />
 
-        <ProgressBar x:Name="_progressBar" Grid.Row="2" />
+        <ProgressBar x:Name="_progressBar" Grid.Row="3" />
     </Grid>
 </Page>

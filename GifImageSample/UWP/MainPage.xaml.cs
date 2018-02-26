@@ -24,6 +24,8 @@ namespace GifImageSample.UWP
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        List<EffectWrapper> _effects = new List<EffectWrapper>();
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -106,6 +108,26 @@ namespace GifImageSample.UWP
             this.cbGifs.ItemsSource = items;
             this.cbGifs.SelectedItem = items[0];
 
+            _effects.Add(new EffectWrapper("Brightness",new BrightnessEffectDescription(new Vector2(1.0f, 0.8f), new Vector2(0, 0.1f))));
+            _effects.Add(new EffectWrapper("ColorMatrix", new ColorMatrixEffectDescription(
+                new[] {
+                            0.2125f, 0.2125f, 0.2125f, 0.0f,
+                            0.7154f, 0.7154f, 0.7154f, 0.0f,
+                            0.0721f, 0.0721f, 0.0721f, 0.0f,
+                            0.0f, 0.0f, 0.0f, 1.0f,
+                            0.0f, 0.0f, 0.0f, 0.0f
+                },
+                ColorMatrixAlphaMode.Straight, true)));
+
+            var convolve = new ConvolveMatrixEffectDescription();
+            convolve.SetKernelMatrix(new[] { -1.0f, -1.0f, -1.0f, -1.0f, 9.0f, -1.0f, -1.0f, -1.0f, -1.0f }, 3, 3);
+            _effects.Add(new EffectWrapper("Convolve", convolve));
+            _effects.Add(new EffectWrapper("Hue", new HueEffectDescription(180.0f)));
+            _effects.Add(new EffectWrapper("Saturation", new SaturationEffectDescription()));
+            _effects.Add(new EffectWrapper("Gaussian Blur", new GaussianBlurEffectDescription(5.0f, GaussianBlurOptimization.Speed, GaussianBlurBorderMode.Soft)));
+            _effects.Add(new EffectWrapper("Tint", new TintEffectDescription(new Vector4F(1.0f, 1.0f, 5.0f, 1.0f))));
+            this.cbEffects.ItemsSource = _effects;
+            this.cbEffects.PlaceholderText = "No effects selected";
         }
         private void cbGifs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -127,6 +149,17 @@ namespace GifImageSample.UWP
         private void AppBarButtonOpenSingleEmoticonTest_Click(object sender, RoutedEventArgs e)
         {
             this.Frame.Navigate(typeof(SingleGifTest));
+        }
+
+        private void CheckBox_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            List<IEffectDescription> effects = _effects.Where(x => x.IsActive).Select(x => x.EffectDescription).ToList();
+            AnimationBehavior.SetRenderEffects(_gifImage, effects);
+            this.cbEffects.PlaceholderText = String.Join(",", _effects.Where(x => x.IsActive).Select(x => x.Name));
+            if (String.IsNullOrEmpty(this.cbEffects.PlaceholderText))
+            {
+                this.cbEffects.PlaceholderText = "No effects selected";
+            }
         }
     }
 }

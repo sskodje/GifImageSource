@@ -95,6 +95,8 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="CustomEffects\TintEffectDescription.cs" />
+    <Compile Include="EffectWrapper.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="GridViewTest.xaml.cs">
       <DependentUpon>GridViewTest.xaml</DependentUpon>

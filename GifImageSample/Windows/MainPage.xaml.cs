@@ -98,6 +98,7 @@ namespace GifImageSample
         private void OpenGif(Uri uri)
         {
             AnimationBehavior.SetImageUriSource(_gifImage, uri);
+            AnimationBehavior.SetHandleNonGifImages(_gifImage, true);
             BusyIndicator.IsActive = true;
         }
         private async Task OpenGifAsStream(Uri uri)
@@ -120,7 +121,19 @@ namespace GifImageSample
             {
                 BusyIndicator.IsActive = true;
                 HttpClient client = new HttpClient();
-                var ras = (await client.GetInputStreamAsync(uri)).AsStreamForRead().AsRandomAccessStream();
+                IRandomAccessStream ras;
+
+                Stream readStream = (await client.GetInputStreamAsync(uri)).AsStreamForRead();
+                if (readStream.CanSeek)
+                {
+                    ras = readStream.AsRandomAccessStream();
+                }
+                else
+                {
+                    MemoryStream memStream = new MemoryStream();
+                    await readStream.CopyToAsync(memStream);
+                    ras = memStream.AsRandomAccessStream();
+                }
                 await AnimationBehavior.SetImageStreamSource(_gifImage, ras);
             }
         }
@@ -190,7 +203,7 @@ namespace GifImageSample
             {
                 effects.Add(new SaturationEffectDescription());
             }
-            if(cbTintEffect.IsChecked.GetValueOrDefault())
+            if (cbTintEffect.IsChecked.GetValueOrDefault())
             {
                 effects.Add(new TintEffectDescription(new Vector4F(1.0f, 1.0f, 5.0f, 1.0f)));
             }
